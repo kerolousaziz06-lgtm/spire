@@ -1,0 +1,146 @@
+/* ============================================================
+   Editorial landing — DARK edition.
+   Dark ground, light ink, giant condensed type, square framed
+   map with a circular focus lens. Word sits ABOVE the image.
+   ============================================================ */
+.ed {
+  --ground: #17140F;      /* dark background (matches map darks) */
+  --ground-2: #1E1A14;
+  --light: #ECE7DB;       /* light ink (bone) */
+  --light-soft: rgba(236,231,219,0.62);
+  --light-faint: rgba(236,231,219,0.34);
+  position: relative;
+  min-height: 100vh;
+  background: var(--ground);
+  color: var(--light);
+  overflow-x: hidden;
+}
+
+.ed-topbar {
+  display: flex; justify-content: space-between;
+  padding: var(--s4) var(--s6);
+  border-bottom: 1px solid rgba(236,231,219,0.16);
+  font-family: var(--font-mono); font-size: 11px;
+  letter-spacing: 0.14em; color: var(--light-soft);
+}
+
+/* ---- HERO ---- */
+.ed-hero {
+  position: relative;
+  padding: var(--s6) var(--s6) var(--s7);
+  display: flex; flex-direction: column; align-items: center;
+}
+
+/* liquid glass flow behind the hero content */
+.ed-flow {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  opacity: 0.9;
+}
+.ed-hero > *:not(.ed-flow) { position: relative; z-index: 1; }
+
+
+/* stage stacks the word over the framed map */
+.ed-stage {
+  position: relative;
+  z-index: 1;
+  width: min(56%, 490px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* square frame holding the map + lens */
+.ed-frame {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+}
+
+/* giant condensed wordmark above the map (cutout removed for now) */
+.ed-word {
+  z-index: 2;
+  font-family: var(--font-grotesk);
+  font-weight: 700;
+  font-size: clamp(72px, 15vw, 240px);
+  line-height: 0.9;
+  letter-spacing: -0.03em;
+  text-align: center;
+  width: 100%;
+  margin: 0 0 var(--s3);
+  color: var(--light);
+  /* trailing letter-spacing adds phantom space on the right; a small
+     left indent equal to it re-centers the glyphs within the box */
+  text-indent: -0.03em;
+}
+.ed-frame-caption {
+  display: flex; justify-content: center; gap: var(--s2);
+  margin-top: var(--s3);
+  font-family: var(--font-mono); font-size: 11px;
+  letter-spacing: 0.1em; color: var(--light-soft);
+}
+
+/* marginalia */
+.ed-margin {
+  position: absolute;
+  font-family: var(--font-mono); font-size: 12px;
+  letter-spacing: 0.16em; color: var(--light-faint);
+  text-transform: uppercase; z-index: 2; pointer-events: none;
+}
+.ed-margin--l  { left: var(--s5); top: 52%; writing-mode: vertical-rl; transform: rotate(180deg); }
+.ed-margin--r  { right: var(--s5); top: 50%; writing-mode: vertical-rl; }
+.ed-margin--tl { left: var(--s6); top: 30%; }
+.ed-margin--tr { right: var(--s6); top: 30%; }
+.ed-margin--bl { left: var(--s6); bottom: 14%; }
+.ed-margin--br { right: var(--s6); bottom: 14%; }
+
+.ed-tagline {
+  margin-top: var(--s5);
+  font-family: var(--font-grotesk); font-size: var(--fs-base);
+  color: var(--light-soft); letter-spacing: 0.02em;
+}
+
+/* ---- MODULE CARDS ---- */
+.ed-modules {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0;
+  border-top: 1px solid rgba(236,231,219,0.18);
+}
+.ed-module {
+  display: flex; align-items: flex-start; gap: var(--s4);
+  text-align: left; padding: var(--s6);
+  background: transparent; border: none;
+  border-right: 1px solid rgba(236,231,219,0.18);
+  cursor: pointer; transition: background 240ms ease;
+}
+.ed-module:last-child { border-right: none; }
+.ed-module:hover { background: rgba(236,231,219,0.05); }
+.ed-module-num { font-family: var(--font-mono); font-size: 13px; color: var(--light-faint); padding-top: 6px; }
+.ed-module-body { flex: 1; }
+.ed-module-kind { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.16em; color: var(--light-soft); }
+.ed-module-name {
+  font-family: var(--font-grotesk); font-weight: 700;
+  font-size: clamp(28px, 4vw, 46px); letter-spacing: -0.02em;
+  line-height: 1; margin: var(--s2) 0 var(--s3); color: var(--light);
+}
+.ed-module-desc { font-family: var(--font-grotesk); font-size: var(--fs-base); color: var(--light-soft); line-height: 1.5; max-width: 40ch; }
+.ed-module-arrow { font-family: var(--font-grotesk); font-size: 24px; color: var(--light); transition: transform 220ms ease; }
+.ed-module:hover .ed-module-arrow { transform: translateX(8px); }
+
+.ed-footer {
+  display: flex; justify-content: space-between;
+  padding: var(--s4) var(--s6);
+  border-top: 1px solid rgba(236,231,219,0.18);
+  font-family: var(--font-mono); font-size: 11px;
+  letter-spacing: 0.12em; color: var(--light-soft);
+}
+
+@media (max-width: 720px) {
+  .ed-word { font-size: clamp(56px, 19vw, 110px); }
+  .ed-frame { width: 76%; }
+  .ed-modules { grid-template-columns: 1fr; }
+  .ed-module { border-right: none; border-bottom: 1px solid rgba(236,231,219,0.18); }
+  .ed-margin--l, .ed-margin--r { display: none; }
+}

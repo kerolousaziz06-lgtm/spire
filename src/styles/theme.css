@@ -1,0 +1,161 @@
+/* ============================================================
+   MonteVue — Design Tokens (single source of truth for the look)
+   Every color/space/font in the app points back to a token here.
+   Change a value here and it updates everywhere. This is the
+   "semantic color token" discipline that real design systems use.
+   ============================================================ */
+:root {
+  /* Surfaces — layered dark for depth (base < panel < card) */
+  --bg-base:    #0A0C10;   /* deepest background */
+  --bg-panel:   #12151C;   /* raised panels sit on the base */
+  --bg-card:    #171B24;   /* cards sit on panels */
+  --bg-card-hover: #1C2129;
+  --border:     rgba(255,255,255,0.06);
+  --border-strong: rgba(255,255,255,0.10);
+
+  /* Text */
+  --text-primary:   #E8EAED;
+  --text-secondary: #9AA0AA;
+  --text-muted:     #5C6370;
+
+  /* Accent — blue, used with discipline */
+  --accent:        #3B82F6;
+  --accent-bright: #60A5FA;
+  --accent-dim:    rgba(59,130,246,0.12);
+  --accent-glow:   rgba(59,130,246,0.28);
+
+  /* Functional — ONLY for gains/losses, always paired with an arrow */
+  --gain: #34D399;
+  --loss: #F87171;
+  --gain-dim: rgba(52,211,153,0.12);
+  --loss-dim: rgba(248,113,113,0.12);
+
+  /* Spacing scale (4/8px rhythm) */
+  --s1: 4px;  --s2: 8px;  --s3: 12px; --s4: 16px;
+  --s5: 24px; --s6: 32px; --s7: 48px; --s8: 64px;
+
+  /* Radius */
+  --r-sm: 8px; --r-md: 12px; --r-lg: 16px; --r-xl: 20px;
+
+  /* Type scale */
+  --fs-xs: 11px; --fs-sm: 13px; --fs-base: 15px;
+  --fs-lg: 18px; --fs-xl: 24px; --fs-2xl: 34px; --fs-3xl: 48px;
+
+  /* Shadow / elevation */
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.4), 0 8px 24px rgba(0,0,0,0.25);
+  --shadow-glow: 0 0 0 1px var(--accent-glow), 0 8px 32px rgba(59,130,246,0.15);
+}
+
+/* ---- Reset & base ---- */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, #root { height: 100%; }
+
+body {
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-size: var(--fs-base);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  /* subtle radial glow behind everything for atmosphere */
+  background-image:
+    radial-gradient(900px 500px at 15% -10%, rgba(59,130,246,0.06), transparent 60%),
+    radial-gradient(700px 500px at 100% 0%, rgba(96,165,250,0.04), transparent 55%);
+  background-attachment: fixed;
+}
+
+/* Tabular figures wherever numbers appear — stops layout jitter */
+.tabular { font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+
+/* Respect users who prefer less motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Scrollbars matching the dark theme */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #232833; border-radius: 8px; }
+::-webkit-scrollbar-thumb:hover { background: #2c3340; }
+
+/* Fade-up entrance used by cards (staggered via inline delay) */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================================
+   V2 THEME LAYER — sleek/modern pass.
+   Warm-amber accent, gradient depth, glass, editorial + mono type.
+   Added on top so we can tune the new look in one place.
+   ============================================================ */
+:root {
+  /* Warm metallic accent (replaces blue as the star) */
+  --gold:        #E8B15C;
+  --gold-bright: #F5C978;
+  --gold-dim:    rgba(232,177,92,0.12);
+  --gold-glow:   rgba(232,177,92,0.30);
+
+  /* Electric edge colors (photo 2 vibe) — used sparingly for glow */
+  --electric-1: #7C5CFF;   /* violet */
+  --electric-2: #3BE0C0;   /* teal-green */
+
+  /* Glass surfaces */
+  --glass-bg:     rgba(22, 26, 34, 0.55);
+  --glass-border: rgba(255,255,255,0.10);
+  --glass-blur:   16px;
+
+  /* Fonts */
+  --font-display: 'Instrument Serif', Georgia, serif;   /* editorial headlines */
+  --font-grotesk: 'Space Grotesk', 'Inter', sans-serif; /* modern sans headings */
+  --font-mono:    'JetBrains Mono', 'SF Mono', monospace; /* terminal numbers */
+}
+
+/* Richer background: deep near-black with a warm+cool gradient wash */
+body.v2 {
+  background:
+    radial-gradient(1000px 600px at 12% -8%, rgba(232,177,92,0.06), transparent 55%),
+    radial-gradient(900px 600px at 100% 5%, rgba(124,92,255,0.07), transparent 55%),
+    radial-gradient(700px 500px at 50% 110%, rgba(59,224,192,0.04), transparent 60%),
+    #08090C;
+  background-attachment: fixed;
+}
+
+/* Mono numbers everywhere the .tabular class is used, in v2 */
+body.v2 .tabular { font-family: var(--font-mono); letter-spacing: -0.02em; }
+
+/* Glass card treatment (opt-in via .glass) */
+.glass {
+  background: var(--glass-bg) !important;
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border) !important;
+}
+
+/* Electric edge glow (opt-in via .electric) */
+.electric {
+  position: relative;
+}
+.electric::after {
+  content: '';
+  position: absolute; inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, var(--electric-1), var(--electric-2));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* Count-up + reveal helpers */
+@keyframes revealUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.reveal { opacity: 0; }
+.reveal.is-visible { animation: revealUp 700ms cubic-bezier(0.16,1,0.3,1) forwards; }

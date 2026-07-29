@@ -1,0 +1,164 @@
+/* Dimmed backdrop covering the whole screen */
+.pe-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(6, 8, 12, 0.6);
+  backdrop-filter: blur(3px);
+  display: grid;
+  place-items: center;
+  z-index: 1000;
+  padding: var(--s5);
+  animation: peFade 180ms ease both;
+}
+@keyframes peFade { from { opacity: 0; } to { opacity: 1; } }
+
+/* The modal itself — bigger, centered, elevated */
+.pe-modal {
+  width: 100%;
+  max-width: 460px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: var(--bg-card);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-xl);
+  padding: var(--s6);
+  box-shadow: 0 24px 80px rgba(0,0,0,0.6), 0 0 0 1px var(--accent-glow);
+  animation: peRise 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes peRise {
+  from { opacity: 0; transform: translateY(16px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.pe-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--s5);
+}
+.pe-title { font-size: var(--fs-xl); font-weight: 600; color: var(--text-primary); }
+.pe-head-right { display: flex; align-items: center; gap: var(--s3); }
+
+.pe-toggle {
+  display: inline-flex;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 2px;
+  gap: 2px;
+}
+.pe-toggle button {
+  border: none; background: transparent; color: var(--text-muted);
+  font-size: var(--fs-sm); font-weight: 600; width: 30px; height: 26px;
+  border-radius: 6px; cursor: pointer; transition: color 160ms ease, background 160ms ease;
+}
+.pe-toggle button:hover { color: var(--text-secondary); }
+.pe-toggle button.is-active { background: var(--accent); color: #fff; }
+
+.pe-x {
+  border: none; background: transparent; color: var(--text-muted);
+  font-size: 24px; line-height: 1; cursor: pointer; padding: 0 4px;
+  border-radius: 6px; transition: color 160ms ease;
+}
+.pe-x:hover { color: var(--text-primary); }
+
+.pe-list { display: flex; flex-direction: column; gap: var(--s5); }
+.pe-row { display: flex; flex-direction: column; gap: var(--s3); }
+.pe-row-top { display: flex; align-items: center; gap: var(--s2); }
+.pe-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.pe-name { font-size: var(--fs-base); color: var(--text-secondary); flex: 1; }
+.pe-remove {
+  border: none; background: transparent; color: var(--text-muted);
+  font-size: 18px; line-height: 1; cursor: pointer; padding: 0 4px;
+  border-radius: 4px; transition: color 160ms ease;
+}
+.pe-remove:hover { color: var(--loss); }
+
+.pe-controls { display: flex; flex-direction: column; gap: var(--s3); }
+
+.pe-input-wrap {
+  display: inline-flex; align-items: center; align-self: flex-start;
+  background: var(--bg-panel); border: 1px solid var(--border);
+  border-radius: 8px; padding: 4px 10px;
+  transition: border-color 160ms ease;
+}
+.pe-input-wrap:focus-within { border-color: var(--accent); }
+.pe-currency { color: var(--text-muted); font-size: var(--fs-base); }
+.pe-input {
+  background: transparent; border: none; outline: none;
+  color: var(--text-primary); font-size: var(--fs-lg); font-weight: 600;
+  width: 120px; padding: 2px 4px;
+}
+.pe-percent { font-size: var(--fs-xl); font-weight: 700; color: var(--text-primary); }
+
+/* Slider (same look as before) */
+.pe-slider {
+  -webkit-appearance: none; appearance: none;
+  width: 100%; height: 6px; border-radius: 6px; cursor: pointer;
+  background: linear-gradient(to right,
+    var(--track) 0%, var(--track) var(--fill),
+    var(--bg-panel) var(--fill), var(--bg-panel) 100%);
+  outline: none;
+}
+.pe-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: #fff; border: 3px solid var(--track);
+  box-shadow: 0 0 0 3px rgba(255,255,255,0.06), 0 2px 6px rgba(0,0,0,0.4);
+  transition: transform 120ms ease;
+}
+.pe-slider::-webkit-slider-thumb:hover { transform: scale(1.15); }
+.pe-slider::-moz-range-thumb {
+  width: 16px; height: 16px; border-radius: 50%;
+  background: #fff; border: 3px solid var(--track); cursor: pointer;
+}
+
+/* Add asset */
+.pe-add-wrap { margin-top: var(--s4); }
+.pe-add-btn {
+  width: 100%; border: 1px dashed var(--border-strong); background: transparent;
+  color: var(--text-secondary); font-size: var(--fs-sm); font-weight: 500;
+  padding: 10px; border-radius: var(--r-md); cursor: pointer;
+  transition: border-color 160ms ease, color 160ms ease;
+}
+.pe-add-btn:hover { border-color: var(--accent); color: var(--accent-bright); }
+.pe-add-menu {
+  display: flex; flex-direction: column; gap: 2px;
+  background: var(--bg-panel); border: 1px solid var(--border);
+  border-radius: var(--r-md); padding: 4px;
+}
+.pe-add-item {
+  display: flex; align-items: center; gap: var(--s2);
+  border: none; background: transparent; color: var(--text-secondary);
+  font-size: var(--fs-sm); padding: 9px 10px; border-radius: 8px;
+  cursor: pointer; text-align: left; transition: background 140ms ease, color 140ms ease;
+}
+.pe-add-item:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+
+/* Footer: total + actions */
+.pe-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--s6);
+  padding-top: var(--s5);
+  border-top: 1px solid var(--border);
+}
+.pe-total { display: flex; flex-direction: column; gap: 2px; }
+.pe-total span:first-child {
+  font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted);
+}
+.pe-total-amount { font-size: var(--fs-xl); font-weight: 700; color: var(--text-primary); }
+
+.pe-actions { display: flex; gap: var(--s3); }
+.pe-btn {
+  border: none; font-size: var(--fs-sm); font-weight: 600;
+  padding: 10px 20px; border-radius: var(--r-md); cursor: pointer;
+  transition: background 160ms ease, transform 120ms ease;
+}
+.pe-btn:active { transform: scale(0.97); }
+.pe-btn-ghost { background: var(--bg-panel); color: var(--text-secondary); border: 1px solid var(--border); }
+.pe-btn-ghost:hover { color: var(--text-primary); background: var(--bg-card-hover); }
+.pe-btn-primary { background: var(--accent); color: #fff; box-shadow: 0 4px 14px rgba(59,130,246,0.35); }
+.pe-btn-primary:hover { background: var(--accent-bright); }
+.pe-btn:focus-visible { outline: 2px solid var(--accent-bright); outline-offset: 2px; }

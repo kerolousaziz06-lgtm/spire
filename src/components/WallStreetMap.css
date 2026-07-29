@@ -1,0 +1,61 @@
+/* square container, dark */
+.wsm {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  background: #1a1712;
+}
+
+.wsm-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 56% 44%;
+}
+
+/* blurred base layer (out of focus) */
+.wsm-img--blur {
+  filter: blur(5px) brightness(0.85);
+  transform: scale(1.04);   /* hide blur edge bleed */
+}
+
+/* circular lens revealing the sharp image */
+.wsm-lens {
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 78%;
+  aspect-ratio: 1 / 1;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.12),
+    0 20px 60px rgba(0,0,0,0.5);
+}
+/* the sharp image inside the lens must align with the blurred one */
+.wsm-img--sharp {
+  position: absolute;
+  width: calc(100% / 0.78);
+  height: calc(100% / 0.78);
+  left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  object-fit: cover;
+  object-position: 56% 44%;
+}
+.wsm-lens-ring {
+  position: absolute; inset: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.18);
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .wsm-lens { animation: lensFloat 12s ease-in-out infinite alternate; }
+  @keyframes lensFloat {
+    from { transform: translate(-50%, -52%); }
+    to   { transform: translate(-50%, -48%); }
+  }
+}

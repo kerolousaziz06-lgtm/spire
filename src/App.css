@@ -1,0 +1,16 @@
+/* The app is a two-part horizontal layout: fixed sidebar + scrolling content */
+.app-shell {
+  display: flex;
+  height: 100vh;
+  min-height: 100dvh;
+}
+
+.app-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--s6) var(--s7);
+}
+
+@media (max-width: 700px) {
+  .app-content { padding: var(--s5) var(--s4); }
+}

@@ -1,0 +1,94 @@
+.fan-wrap { position: relative; width: 100%; }
+
+.fan {
+  width: 100%;
+  height: auto;
+  display: block;
+  cursor: crosshair;
+}
+
+.fan-band { transition: opacity 200ms ease; }
+
+/* Median line "draws itself" on mount */
+.fan-median {
+  stroke-dasharray: 2000;
+  stroke-dashoffset: 2000;
+  animation: drawLine 900ms ease-out forwards;
+}
+@keyframes drawLine { to { stroke-dashoffset: 0; } }
+
+.fan-axis {
+  fill: var(--text-muted);
+  font-size: 11px;
+  font-family: 'Inter', sans-serif;
+}
+
+.fan-empty {
+  height: 240px;
+  display: grid;
+  place-items: center;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  border: 1px dashed var(--border);
+  border-radius: var(--r-md);
+}
+
+/* Tooltip — floats over the chart, flips sides to avoid the data */
+.fan-tooltip {
+  position: absolute;
+  top: 8px;
+  background: rgba(18, 21, 28, 0.82);
+  backdrop-filter: blur(6px);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-md);
+  padding: 10px 12px;
+  min-width: 150px;
+  box-shadow: var(--shadow-card);
+  pointer-events: none;
+  transition: left 200ms ease, right 200ms ease, opacity 160ms ease;
+}
+.fan-tooltip.is-right { right: 8px; left: auto; }
+.fan-tooltip.is-left  { left: 8px; right: auto; }
+.fan-tt-year {
+  font-size: var(--fs-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.fan-tt-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s3);
+  margin-top: 4px;
+}
+.fan-tt-label { font-size: var(--fs-sm); color: var(--text-secondary); }
+.fan-tt-med { font-size: var(--fs-lg); font-weight: 700; color: var(--accent-bright); }
+.fan-tt-range { font-size: var(--fs-xs); color: var(--text-muted); margin-top: 2px; }
+.fan-tt-conf { opacity: 0.7; }
+
+/* Readout bar below the chart — a clean strip that never covers data */
+.fan-readout {
+  display: flex;
+  align-items: center;
+  gap: var(--s5);
+  margin-top: var(--s3);
+  padding: var(--s3) var(--s4);
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  flex-wrap: wrap;
+}
+.fan-ro-year {
+  font-size: var(--fs-xs); letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--text-muted); min-width: 56px;
+}
+.fan-ro-main { display: flex; align-items: baseline; gap: var(--s2); }
+.fan-ro-label { font-size: var(--fs-sm); color: var(--text-secondary); }
+.fan-ro-med { font-size: var(--fs-lg); font-weight: 700; color: var(--accent-bright); }
+.fan-ro-range { font-size: var(--fs-sm); color: var(--text-muted); display: flex; align-items: center; gap: 6px; }
+.fan-ro-swatch {
+  display: inline-block; width: 20px; height: 8px; border-radius: 3px;
+  background: linear-gradient(90deg, var(--accent-dim), var(--accent));
+}
+.fan-ro-conf { opacity: 0.7; }

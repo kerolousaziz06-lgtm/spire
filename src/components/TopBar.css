@@ -1,0 +1,62 @@
+.topbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s4);
+  margin-bottom: var(--s5);
+}
+
+.topbar-title {
+  font-size: var(--fs-xl);
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+.topbar-subtitle {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+}
+
+.pills-label {
+  font-size: var(--fs-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* Pill group: a rounded track holding several toggle buttons */
+.pills {
+  display: inline-flex;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 40px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.pill {
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  padding: 6px 14px;
+  border-radius: 40px;
+  cursor: pointer;
+  transition: color 160ms ease, background 160ms ease;
+}
+.pill:hover { color: var(--text-primary); }
+.pill.is-active {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(59,130,246,0.35);
+}
+.pill:focus-visible { outline: 2px solid var(--accent-bright); outline-offset: 2px; }

@@ -1,0 +1,33 @@
+.ef { display: flex; flex-direction: column; gap: var(--s3); }
+.ef-svg { width: 100%; height: auto; display: block; }
+
+.ef-axis { fill: var(--text-muted); font-size: 10px; font-family: 'Inter', sans-serif; }
+.ef-axistitle { fill: var(--text-secondary); font-size: 11px; font-weight: 500; font-family: 'Inter', sans-serif; }
+
+.ef-frontier {
+  stroke-dasharray: 1200;
+  stroke-dashoffset: 1200;
+  animation: efDraw 1100ms ease-out forwards;
+}
+@keyframes efDraw { to { stroke-dashoffset: 0; } }
+
+.ef-you-halo { animation: efPulse 2.4s ease-in-out infinite; }
+@keyframes efPulse {
+  0%, 100% { opacity: 0.35; r: 9px; }
+  50% { opacity: 0.6; r: 11px; }
+}
+.ef-you-label { fill: var(--accent-bright); font-size: 11px; font-weight: 700; font-family: 'Inter', sans-serif; }
+
+.ef-footer { display: flex; align-items: center; gap: var(--s4); flex-wrap: wrap; }
+.ef-key { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-xs); color: var(--text-muted); }
+.ef-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.ef-dot-you { background: #fff; border: 2px solid var(--accent-bright); }
+.ef-dot-cloud { background: var(--accent); opacity: 0.4; }
+.ef-line { width: 16px; height: 3px; border-radius: 3px; background: var(--accent-bright); display: inline-block; }
+.ef-current { margin-left: auto; font-size: var(--fs-xs); color: var(--accent-bright); font-weight: 600; }
+
+.ef-empty {
+  padding: var(--s6) var(--s4); text-align: center;
+  color: var(--text-muted); font-size: var(--fs-sm);
+  border: 1px dashed var(--border); border-radius: var(--r-md);
+}

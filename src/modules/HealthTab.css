@@ -1,0 +1,85 @@
+.health {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s5);
+  max-width: 820px;
+}
+
+/* Headline verdict card */
+.health-headline { text-align: left; }
+.health-badge {
+  display: inline-block;
+  font-size: var(--fs-xl);
+  font-weight: 700;
+  padding: 2px 0;
+}
+.health-badge--good { color: var(--gain); }
+.health-badge--ok   { color: #D4A94C; }
+.health-badge--bad  { color: var(--loss); }
+.health-headline-sub {
+  margin-top: var(--s2);
+  font-size: var(--fs-base);
+  color: var(--text-secondary);
+  max-width: 64ch;
+}
+
+.health-section { }
+.health-metrics { margin-top: var(--s2); }
+
+/* DuPont */
+.dupont-card { }
+.dupont-intro {
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+  line-height: 1.6;
+  max-width: 68ch;
+  margin-bottom: var(--s5);
+}
+.dupont-flow {
+  display: flex;
+  align-items: stretch;
+  gap: var(--s2);
+  flex-wrap: wrap;
+}
+.dupont-factor {
+  flex: 1;
+  min-width: 120px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: var(--s4);
+  text-align: center;
+}
+.dupont-factor.is-highlight {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+}
+.dupont-factor-value { font-size: var(--fs-xl); font-weight: 700; color: var(--text-primary); }
+.dupont-factor.is-highlight .dupont-factor-value { color: var(--accent-bright); }
+.dupont-factor-label { font-size: var(--fs-sm); font-weight: 600; color: var(--text-secondary); margin-top: 4px; }
+.dupont-factor-sub { font-size: var(--fs-xs); color: var(--text-muted); margin-top: 2px; }
+
+.dupont-op {
+  display: flex;
+  align-items: center;
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  color: var(--text-muted);
+  padding: 0 2px;
+}
+
+.dupont-driver {
+  margin-top: var(--s5);
+  padding: var(--s4);
+  border-radius: var(--r-md);
+  font-size: var(--fs-sm);
+  line-height: 1.6;
+  border: 1px solid var(--border);
+}
+.dupont-driver--good { background: var(--gain-dim); color: var(--text-secondary); border-color: rgba(52,211,153,0.2); }
+.dupont-driver--warn { background: rgba(212,169,76,0.1); color: var(--text-secondary); border-color: rgba(212,169,76,0.25); }
+
+@media (max-width: 720px) {
+  .dupont-flow { flex-direction: column; }
+  .dupont-op { justify-content: center; }
+}

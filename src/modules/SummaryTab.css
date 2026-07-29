@@ -1,0 +1,39 @@
+.summary { display: flex; flex-direction: column; gap: var(--s5); max-width: 860px; }
+
+.summary-hero { }
+.summary-eyebrow { font-size: var(--fs-xs); letter-spacing: 0.08em; color: var(--text-muted); }
+.summary-headline { font-size: var(--fs-2xl); font-weight: 800; color: var(--text-primary); margin-top: var(--s2); line-height: 1.15; }
+.summary-detail { margin-top: var(--s3); font-size: var(--fs-base); color: var(--text-secondary); line-height: 1.6; max-width: 68ch; }
+
+.summary-cols { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s5); }
+@media (max-width: 760px) { .summary-cols { grid-template-columns: 1fr; } }
+
+.summary-verdict {
+  display: inline-block; font-size: var(--fs-xl); font-weight: 800; padding: 4px 16px; border-radius: 20px;
+  margin: var(--s3) 0 var(--s4);
+}
+.summary-verdict--good { background: var(--gain-dim); color: var(--gain); }
+.summary-verdict--ok { background: rgba(212,169,76,0.14); color: #D4A94C; }
+.summary-verdict--bad { background: var(--loss-dim); color: var(--loss); }
+
+.summary-list-label {
+  font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted);
+  margin: var(--s4) 0 var(--s2);
+}
+.summary-item { display: flex; align-items: center; gap: var(--s2); font-size: var(--fs-sm); color: var(--text-secondary); padding: 4px 0; }
+.summary-item-val { color: var(--text-primary); font-weight: 600; margin-left: 4px; }
+.summary-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.summary-dot--good { background: var(--gain); }
+.summary-dot--bad { background: var(--loss); }
+.summary-empty { font-size: var(--fs-sm); color: var(--text-muted); }
+
+.summary-val-rows { display: flex; flex-direction: column; gap: var(--s2); }
+.summary-val-row {
+  display: flex; justify-content: space-between; font-size: var(--fs-sm); color: var(--text-secondary);
+  padding: var(--s2) 0; border-top: 1px solid var(--border);
+}
+.summary-val-row:first-child { border-top: none; }
+.summary-val-row--emph { font-weight: 700; color: var(--text-primary); font-size: var(--fs-base); }
+.summary-val-row .is-up { color: var(--gain); }
+.summary-val-row .is-down { color: var(--loss); }
+.summary-val-note { font-size: var(--fs-xs); color: var(--text-muted); margin-top: var(--s3); line-height: 1.5; }

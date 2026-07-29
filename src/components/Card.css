@@ -1,0 +1,66 @@
+/* Base card surface */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: var(--s5);
+  box-shadow: var(--shadow-card);
+  animation: fadeUp 400ms ease both;
+}
+
+/* Hero variant: blue outline glow to draw the eye to the key result */
+.card--glow {
+  border-color: transparent;
+  box-shadow: var(--shadow-glow);
+  background:
+    linear-gradient(var(--bg-card), var(--bg-card)) padding-box,
+    linear-gradient(135deg, var(--accent), transparent 60%) border-box;
+  border: 1px solid transparent;
+}
+
+/* ---- StatCard ---- */
+.statcard { display: flex; flex-direction: column; gap: var(--s2); }
+
+.statcard-label {
+  font-size: var(--fs-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.statcard-value {
+  font-size: var(--fs-2xl);
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.1;
+}
+
+.statcard-bottom {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  margin-top: var(--s1);
+}
+
+.statcard-hint {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+/* Gain/loss chip: colored background + arrow + number.
+   Never color alone — the arrow carries the meaning too. */
+.delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+.delta--up   { color: var(--gain); background: var(--gain-dim); }
+.delta--down { color: var(--loss); background: var(--loss-dim); }
+
+/* Neutral delta (no gain/loss) — for empty/zero states */
+.delta--neutral { color: var(--text-muted); background: var(--bg-panel); }

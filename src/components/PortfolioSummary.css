@@ -1,0 +1,67 @@
+/* Header row (title + toggle) — sits above the clickable area */
+.ps-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--s4);
+}
+
+/* $/% toggle on the card */
+.ps-toggle {
+  display: inline-flex;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 2px;
+  gap: 2px;
+}
+.ps-toggle button {
+  border: none; background: transparent; color: var(--text-muted);
+  font-size: var(--fs-sm); font-weight: 600; width: 28px; height: 24px;
+  border-radius: 6px; cursor: pointer; transition: color 160ms ease, background 160ms ease;
+}
+.ps-toggle button:hover { color: var(--text-secondary); }
+.ps-toggle button.is-active { background: var(--accent); color: #fff; }
+
+/* The clickable area (list + bar + total). Strip button styling. */
+.ps-open {
+  all: unset;
+  display: block;
+  width: 100%;
+  cursor: pointer;
+  box-sizing: border-box;
+  border-radius: var(--r-md);
+}
+.ps-open:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+
+.ps-list { display: flex; flex-direction: column; gap: var(--s3); }
+.ps-row { display: flex; align-items: center; gap: var(--s2); }
+.ps-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.ps-name { font-size: var(--fs-sm); color: var(--text-secondary); flex: 1; }
+.ps-weight { font-size: var(--fs-sm); font-weight: 600; color: var(--text-primary); }
+.ps-empty { font-size: var(--fs-sm); color: var(--text-muted); padding: var(--s3) 0; }
+
+/* Stacked allocation bar */
+.ps-bar {
+  display: flex; height: 8px; border-radius: 6px; overflow: hidden;
+  margin-top: var(--s4); background: var(--bg-panel);
+}
+.ps-bar-seg { height: 100%; transition: width 300ms ease; }
+
+.ps-total {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: var(--s5); padding-top: var(--s4);
+  border-top: 1px solid var(--border);
+  font-size: var(--fs-sm); color: var(--text-secondary);
+}
+.ps-total-amount { font-size: var(--fs-lg); font-weight: 700; color: var(--text-primary); }
+
+/* subtle "click to edit" affordance that brightens on hover */
+.ps-edit-hint {
+  margin-top: var(--s4);
+  text-align: center;
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  transition: color 160ms ease;
+}
+.ps-open:hover .ps-edit-hint { color: var(--accent-bright); }

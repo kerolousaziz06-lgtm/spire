@@ -1,0 +1,34 @@
+.crash-wrap { position: relative; width: 100%; }
+.crash-svg { width: 100%; height: auto; display: block; cursor: crosshair; }
+
+.crash-line {
+  stroke-dasharray: 2000;
+  stroke-dashoffset: 2000;
+  animation: crashDraw 1000ms ease-out forwards;
+}
+@keyframes crashDraw { to { stroke-dashoffset: 0; } }
+
+.crash-axis { fill: var(--text-muted); font-size: 11px; font-family: 'Inter', sans-serif; }
+.crash-trough-label { fill: var(--loss); font-size: 11px; font-weight: 600; font-family: 'Inter', sans-serif; }
+
+.crash-empty {
+  height: 240px; display: grid; place-items: center;
+  color: var(--text-muted); font-size: var(--fs-sm);
+  border: 1px dashed var(--border); border-radius: var(--r-md);
+}
+
+.crash-tooltip {
+  position: absolute; top: 8px; right: 8px;
+  background: var(--bg-panel); border: 1px solid var(--border-strong);
+  border-radius: var(--r-md); padding: 10px 12px; min-width: 140px;
+  box-shadow: var(--shadow-card); pointer-events: none;
+}
+.crash-tt-month {
+  font-size: var(--fs-xs); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted);
+}
+.crash-tt-row { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s3); margin-top: 4px; }
+.crash-tt-val { font-size: var(--fs-lg); font-weight: 700; color: var(--text-primary); }
+.crash-tt-drop { font-size: var(--fs-sm); font-weight: 600; }
+.crash-tt-drop.is-down { color: var(--loss); }
+.crash-tt-drop.is-up { color: var(--gain); }
+.crash-tt-start { font-size: var(--fs-xs); color: var(--text-muted); margin-top: 2px; }

@@ -1,0 +1,254 @@
+.module { max-width: 1400px; margin: 0 auto; }
+
+/* Three-zone cockpit grid: builder | main | readouts */
+.cockpit {
+  display: grid;
+  grid-template-columns: 300px 1fr 300px;
+  gap: var(--s5);
+  align-items: start;
+}
+
+/* On narrower screens, collapse to a single column */
+@media (max-width: 1100px) {
+  .cockpit { grid-template-columns: 1fr; }
+}
+
+.cockpit-left, .cockpit-right {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s5);
+}
+.cockpit-center {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s5);
+}
+
+/* ---- Section headers inside cards ---- */
+.section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: var(--s4);
+}
+.section-title {
+  font-size: var(--fs-base);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.section-note {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}
+
+/* ---- Portfolio builder ---- */
+.builder { display: flex; flex-direction: column; gap: var(--s4); }
+.builder-row { display: flex; flex-direction: column; gap: var(--s2); }
+.builder-top { display: flex; justify-content: space-between; align-items: center; }
+.builder-name { font-size: var(--fs-sm); color: var(--text-secondary); }
+.builder-weight { font-size: var(--fs-sm); font-weight: 600; color: var(--text-primary); }
+
+.slider-track {
+  height: 6px;
+  background: var(--bg-panel);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.slider-fill {
+  height: 100%;
+  border-radius: 6px;
+  transform-origin: left;
+  animation: growWidth 600ms ease both;
+}
+@keyframes growWidth { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+.builder-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: var(--s5);
+  padding-top: var(--s4);
+  border-top: 1px solid var(--border);
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+}
+.builder-amount { font-size: var(--fs-lg); font-weight: 600; color: var(--text-primary); }
+
+/* ---- Hero card ---- */
+.hero { padding: var(--s6); }
+.hero-label {
+  font-size: var(--fs-xs);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+.hero-value {
+  font-size: var(--fs-3xl);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: var(--s2) 0;
+  background: linear-gradient(180deg, #fff, #B9C4D8);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.hero-sub { display: flex; align-items: center; gap: var(--s3); }
+.hero-hint { font-size: var(--fs-sm); color: var(--text-muted); }
+
+/* ---- Stat row ---- */
+.stat-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--s5);
+}
+@media (max-width: 640px) { .stat-row { grid-template-columns: 1fr; } }
+
+/* ---- Chart card ---- */
+.chart-card { min-height: 300px; }
+.chart-placeholder {
+  height: 240px;
+  border-radius: var(--r-md);
+  background:
+    linear-gradient(var(--bg-panel), var(--bg-panel)) padding-box;
+  border: 1px solid var(--border);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+.fan-svg { width: 100%; height: 100%; }
+
+/* ---- Crash replay ---- */
+.replay-list { display: flex; flex-direction: column; gap: var(--s3); }
+.replay-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: var(--s3);
+  border: 1px solid transparent;
+  border-radius: var(--r-md);
+  background: var(--bg-panel);
+  cursor: pointer;
+  text-align: left;
+  transition: background 160ms ease, border-color 160ms ease;
+}
+.replay-row:hover { background: var(--bg-card-hover); }
+.replay-row.is-active {
+  background: var(--bg-card-hover);
+  border-color: var(--loss);
+}
+.replay-row:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.replay-event { font-size: var(--fs-sm); color: var(--text-primary); font-weight: 500; }
+.replay-recovery { font-size: var(--fs-xs); color: var(--text-muted); margin-top: 2px; }
+
+/* Crash view header extras */
+.crash-period { font-size: var(--fs-xs); color: var(--text-muted); }
+.crash-back {
+  border: none; background: transparent; color: var(--accent-bright);
+  font-size: var(--fs-sm); font-weight: 500; cursor: pointer; padding: 4px 8px;
+  border-radius: 6px; transition: background 140ms ease;
+}
+.crash-back:hover { background: var(--accent-dim); }
+.crash-blurb {
+  margin-top: var(--s4); font-size: var(--fs-sm); color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+/* ---- Risk profile ---- */
+.risk-list { display: flex; flex-direction: column; gap: var(--s4); }
+.risk-row { display: flex; flex-direction: column; gap: var(--s2); }
+.risk-top { display: flex; justify-content: space-between; }
+.risk-label { font-size: var(--fs-sm); color: var(--text-secondary); }
+.risk-value { font-size: var(--fs-sm); font-weight: 600; color: var(--text-primary); }
+.risk-track { height: 6px; background: var(--bg-panel); border-radius: 6px; overflow: hidden; }
+.risk-fill {
+  height: 100%;
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-bright));
+  animation: growWidth 700ms ease both;
+}
+
+.replay-note {
+  margin-top: var(--s3);
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* ---- Hero year picker (minimalist slider on the median card) ---- */
+.hero-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s4);
+  margin-bottom: var(--s1);
+}
+.hero-yearpick {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  flex-shrink: 0;
+}
+.hero-yearval {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--accent-bright);
+  min-width: 30px;
+  text-align: right;
+}
+/* slim, understated slider that fits the hero card */
+.hero-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 120px;
+  height: 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  background: linear-gradient(to right,
+    var(--accent) 0%, var(--accent) var(--fill),
+    var(--bg-panel) var(--fill), var(--bg-panel) 100%);
+  outline: none;
+}
+.hero-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: #fff; border: 3px solid var(--accent);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+  transition: transform 120ms ease;
+}
+.hero-slider::-webkit-slider-thumb:hover { transform: scale(1.2); }
+.hero-slider::-moz-range-thumb {
+  width: 14px; height: 14px; border-radius: 50%;
+  background: #fff; border: 3px solid var(--accent); cursor: pointer;
+}
+.hero-slider:focus-visible { outline: 2px solid var(--accent-bright); outline-offset: 3px; }
+
+@media (max-width: 640px) {
+  .hero-top { flex-direction: column; align-items: flex-start; gap: var(--s3); }
+  .hero-slider { width: 100%; }
+  .hero-yearpick { width: 100%; }
+}
+
+/* Disabled crash row (empty portfolio) */
+.replay-row:disabled { opacity: 0.5; cursor: not-allowed; }
+.replay-row:disabled:hover { background: var(--bg-panel); }
+
+/* ---- Deeper analysis row: heatmap + frontier side by side ---- */
+.analysis-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s5);
+  margin-top: var(--s5);
+}
+@media (max-width: 1100px) {
+  .analysis-row { grid-template-columns: 1fr; }
+}
+.analysis-card { min-height: 200px; }
+
+/* Subtle "just recomputed" pulse on the hero value */
+@keyframes heroPulse {
+  0% { text-shadow: 0 0 0 rgba(96,165,250,0); }
+  30% { text-shadow: 0 0 24px rgba(96,165,250,0.35); }
+  100% { text-shadow: 0 0 0 rgba(96,165,250,0); }
+}
+.hero-value.is-fresh { animation: heroPulse 600ms ease-out; }
