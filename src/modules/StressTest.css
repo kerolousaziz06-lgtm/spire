@@ -1,4 +1,15 @@
-.module { max-width: 1400px; margin: 0 auto; }
+/* Flex column that fills .app-content so .cockpit can take all the height
+   left over after the TopBar. */
+.module {
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--grid-gap);
+}
 
 /* ============================================================
    One grid for the whole dashboard.
@@ -19,9 +30,39 @@
     "portfolio hero     crash"
     "risk      fan      corr"
     "money     frontier frontier";
-  gap: var(--s5);
+  gap: var(--grid-gap);
   align-items: stretch;
+
+  /* Fill the height left over after the TopBar and split it between the two
+     chart rows. Row 1 is content-sized (it's text, not a chart); rows 2 and 3
+     share what remains, so the dashboard always ends exactly at the bottom of
+     the viewport — no scrolling, and no dead space on a tall screen.
+     The floor is min-content, not 0. That makes the behaviour self-regulating
+     with no breakpoint to maintain: on a tall viewport the rows expand to fill
+     it exactly, and on one too short to hold everything they stop at their
+     content height and the page scrolls slightly. Scrolling is the right
+     failure mode here - a 0 floor fits every screen but silently CLIPS card
+     content, which is worse than a scrollbar.
+
+     Row 3 gets the larger share because the retirement card is the tallest
+     intrinsic content in the grid; row 2's tallest is the shorter risk list. */
+  flex: 1;
+  min-height: 0;
+  /* Row 1 needs an explicit min-content floor, not `auto`. With a definite
+     grid height, the fr rows below absorb the free space and an `auto` row
+     will happily be squeezed below its own content - which spilled row 1's
+     cards by up to 270px. */
+  grid-template-rows:
+    minmax(min-content, auto)
+    minmax(min-content, 0.92fr)
+    minmax(min-content, 1fr);
 }
+
+/* Cards may shrink inside their tracks, but must never clip: no
+   overflow:hidden here. If content cannot fit, the track's min-content floor
+   pushes the page taller and .app-content scrolls to reach it. */
+.cockpit > * { min-height: 0; }
+.cockpit > * > .card { min-height: 0; }
 
 .area-portfolio { grid-area: portfolio; }
 .area-crash     { grid-area: crash; }
@@ -36,7 +77,8 @@
   grid-area: hero;
   display: flex;
   flex-direction: column;
-  gap: var(--s5);
+  gap: var(--grid-gap);
+  min-height: 0;
 }
 
 /* Single-card areas fill their track so row edges line up — this is what
@@ -50,12 +92,32 @@
 .area-corr > .card,
 .area-frontier > .card { height: 100%; }
 
+/* Chart cards are flex columns: header keeps its natural height, the chart
+   itself takes everything left. Without this the charts would still size
+   themselves from their width and overflow the track. */
+.area-fan > .card,
+.area-corr > .card,
+.area-frontier > .card {
+  display: flex;
+  flex-direction: column;
+}
+.area-fan > .card > .fan-wrap,
+.area-fan > .card > .crash-wrap,
+.area-corr > .card > .heat,
+.area-frontier > .card > .ef {
+  flex: 1;
+  min-height: 0;
+}
+
 /* The retirement card now spans down to the frontier's bottom edge, so let
    its sparkline absorb the extra height instead of leaving the card empty.
    .ret-spark already uses preserveAspectRatio="none", so it stretches by
    design rather than distorting something that was meant to be square. */
 .area-money > .card { display: flex; flex-direction: column; }
-.area-money .ret-spark { flex: 1; height: auto; min-height: 60px; }
+/* height:0 + flex-grow, not height:auto: the sparkline has a fixed viewBox,
+   so height:auto would contribute its full intrinsic aspect height to the
+   card's min-content and inflate the row. */
+.area-money .ret-spark { flex: 1 1 0; height: 0; min-height: 22px; }
 
 /* On narrower screens, collapse to a single column in reading order */
 @media (max-width: 1100px) {
@@ -78,7 +140,7 @@
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  margin-bottom: var(--s4);
+  margin-bottom: var(--stack-gap);
 }
 .section-title {
   font-size: var(--fs-base);
@@ -134,7 +196,12 @@
 .builder-amount { font-size: var(--fs-lg); font-weight: 600; color: var(--text-primary); }
 
 /* ---- Hero card ---- */
-.hero { padding: var(--s6); }
+/* Row 1 is content-sized and was the single biggest fixed block in the
+   height budget (~400px of text). Tightening the padding and letting the
+   headline number scale with the viewport buys the chart rows their space
+   back. clamp() keeps it large on a big screen without blowing the budget
+   on a short one. */
+.hero { padding: var(--card-pad); }
 .hero-label {
   font-size: var(--fs-xs);
   letter-spacing: 0.1em;
@@ -142,10 +209,11 @@
   color: var(--text-secondary);
 }
 .hero-value {
-  font-size: var(--fs-3xl);
+  font-size: clamp(32px, 4.2vh, 48px);
+  line-height: 1.05;
   font-weight: 700;
   letter-spacing: -0.02em;
-  margin: var(--s2) 0;
+  margin: var(--s1) 0;
   background: linear-gradient(180deg, #fff, #B9C4D8);
   -webkit-background-clip: text;
   background-clip: text;
@@ -158,12 +226,13 @@
 .stat-row {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: var(--s5);
+  gap: var(--grid-gap);
 }
 @media (max-width: 640px) { .stat-row { grid-template-columns: 1fr; } }
 
 /* ---- Chart card ---- */
-.chart-card { min-height: 300px; }
+/* No min-height: the card is sized by its grid track now, and a floor here
+   would reintroduce overflow on short viewports. */
 .chart-placeholder {
   height: 240px;
   border-radius: var(--r-md);
@@ -177,7 +246,7 @@
 .fan-svg { width: 100%; height: 100%; }
 
 /* ---- Crash replay ---- */
-.replay-list { display: flex; flex-direction: column; gap: var(--s3); }
+.replay-list { display: flex; flex-direction: column; gap: var(--stack-gap); }
 .replay-row {
   display: flex;
   justify-content: space-between;
@@ -214,8 +283,12 @@
 }
 
 /* ---- Risk profile ---- */
-.risk-list { display: flex; flex-direction: column; gap: var(--s4); }
-.risk-row { display: flex; flex-direction: column; gap: var(--s2); }
+/* Spread the three rows over the card's full height rather than bunching
+   them at the top and leaving the bottom empty. */
+.area-risk > .card { display: flex; flex-direction: column; }
+.area-risk .risk-list { flex: 1; justify-content: space-evenly; gap: var(--s2); }
+.risk-list { display: flex; flex-direction: column; gap: var(--stack-gap); }
+.risk-row { display: flex; flex-direction: column; gap: 5px; }
 .risk-top { display: flex; justify-content: space-between; }
 .risk-label { font-size: var(--fs-sm); color: var(--text-secondary); }
 .risk-value { font-size: var(--fs-sm); font-weight: 600; color: var(--text-primary); }
@@ -228,7 +301,7 @@
 }
 
 .replay-note {
-  margin-top: var(--s3);
+  margin-top: var(--stack-gap);
   font-size: var(--fs-xs);
   color: var(--text-muted);
   font-style: italic;

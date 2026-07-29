@@ -171,7 +171,7 @@ export function StressTest() {
         {/* Crash replays — top right, alongside the hero */}
         <aside className="area-crash">
           <Card delay={2}>
-            <h2 className="section-title" style={{ marginBottom: 'var(--s4)' }}>Historical Crash Replay</h2>
+            <h2 className="section-title" style={{ marginBottom: 'var(--stack-gap)' }}>Historical Crash Replay</h2>
             <div className="replay-list">
               {crashResults.map((c) => (
                 <ReplayRow
@@ -192,7 +192,7 @@ export function StressTest() {
         {/* Risk readouts — left column, level with the fan chart */}
         <aside className="area-risk">
           <Card delay={4}>
-            <h2 className="section-title" style={{ marginBottom: 'var(--s4)' }}>Risk Profile</h2>
+            <h2 className="section-title" style={{ marginBottom: 'var(--stack-gap)' }}>Risk Profile</h2>
             <div className="risk-list">
               <RiskRow label="Volatility"   value={fmtPct(risk.volatility)}   level={risk.volatilityLevel} />
               <RiskRow label="Median max drawdown" value={fmtPct(result.medianMaxDrawdown)} level={Math.min(1, result.medianMaxDrawdown / 0.5)} />

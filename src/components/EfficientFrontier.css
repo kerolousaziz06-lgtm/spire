@@ -1,12 +1,22 @@
-.ef { display: flex; flex-direction: column; gap: var(--s3); }
-.ef-svg { width: 100%; height: auto; display: block; }
+/* Flex column so the plot absorbs leftover height and the legend keeps its
+   natural size. .ef-plot's box is what useElementSize measures. */
+.ef { display: flex; flex-direction: column; gap: var(--s3); height: 100%; min-height: 0; }
+/* Absolutely positioned for the same reason as .fan - see FanChart.css.
+   The measured-viewBox pattern creates an intrinsic-size feedback loop
+   unless the svg is out of flow. */
+.ef-plot { position: relative; flex: 1; min-height: 0; width: 100%; }
+.ef-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 
 .ef-axis { fill: var(--text-muted); font-size: 10px; font-family: 'Inter', sans-serif; }
 .ef-axistitle { fill: var(--text-secondary); font-size: 11px; font-weight: 500; font-family: 'Inter', sans-serif; }
 
+/* Draw-in animation. The dash length must exceed the path's real length or
+   the tail stays permanently hidden — and the path is now as long as the
+   card is wide (measured canvas), not a fixed 460-unit viewBox. 2600 clears
+   any plausible width. */
 .ef-frontier {
-  stroke-dasharray: 1200;
-  stroke-dashoffset: 1200;
+  stroke-dasharray: 2600;
+  stroke-dashoffset: 2600;
   animation: efDraw 1100ms ease-out forwards;
 }
 @keyframes efDraw { to { stroke-dashoffset: 0; } }

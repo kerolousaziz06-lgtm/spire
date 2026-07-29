@@ -34,6 +34,14 @@
   --s1: 4px;  --s2: 8px;  --s3: 12px; --s4: 16px;
   --s5: 24px; --s6: 32px; --s7: 48px; --s8: 64px;
 
+  /* Vertical rhythm that tightens on short screens.
+     The dashboard is sized to fit one viewport, so on a 900px-tall laptop
+     fixed 24px padding on seven cards costs more than the charts can spare.
+     These scale with viewport height and cap at the original values. */
+  --card-pad: clamp(11px, 1.6vh, 24px);
+  --stack-gap: clamp(6px, 1.2vh, 16px);   /* vertical gaps inside cards */
+  --grid-gap: clamp(12px, 1.8vh, 24px);
+
   /* Radius */
   --r-sm: 8px; --r-md: 12px; --r-lg: 16px; --r-xl: 20px;
 
