@@ -189,8 +189,8 @@ export function StressTest() {
           </Card>
         </aside>
 
-        {/* Risk readouts — left column, below the portfolio */}
-        <aside className="area-sidestack">
+        {/* Risk readouts — left column, level with the fan chart */}
+        <aside className="area-risk">
           <Card delay={4}>
             <h2 className="section-title" style={{ marginBottom: 'var(--s4)' }}>Risk Profile</h2>
             <div className="risk-list">
@@ -200,10 +200,14 @@ export function StressTest() {
             </div>
           </Card>
 
+        </aside>
+
+        {/* Retirement — bottom left, extended to meet the frontier's bottom */}
+        <aside className="area-money">
           <RetirementCard />
         </aside>
 
-        {/* Correlation — bottom right, beside the fan chart */}
+        {/* Correlation — middle right, beside the fan chart */}
         <section className="area-corr">
           <Card delay={6}>
             <div className="section-head">
