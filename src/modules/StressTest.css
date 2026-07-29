@@ -1,27 +1,64 @@
 .module { max-width: 1400px; margin: 0 auto; }
 
-/* Three-zone cockpit grid: builder | main | readouts */
+/* ============================================================
+   One grid for the whole dashboard.
+   Previously this was a 3-column cockpit with a SEPARATE
+   .analysis-row stacked underneath it. That had two costs: the
+   left column held only one card, so everything below it was dead
+   space, and the analysis row sat below the fold. Naming every
+   slot as a grid area lets all seven cards share one layout, so
+   the frontier can span the full width and close the gap.
+   ============================================================ */
 .cockpit {
   display: grid;
-  grid-template-columns: 300px 1fr 300px;
+  /* minmax(0, 1fr) not 1fr: the fan chart's SVG would otherwise
+     establish a min-content width and push the grid wider than
+     its container. */
+  grid-template-columns: 300px minmax(0, 1fr) 360px;
+  grid-template-areas:
+    "portfolio hero     crash"
+    "sidestack fan      corr"
+    "frontier  frontier frontier";
   gap: var(--s5);
-  align-items: start;
+  align-items: stretch;
 }
 
-/* On narrower screens, collapse to a single column */
+.area-portfolio { grid-area: portfolio; }
+.area-crash     { grid-area: crash; }
+.area-fan       { grid-area: fan; }
+.area-corr      { grid-area: corr; }
+.area-frontier  { grid-area: frontier; }
+
+/* Two areas stack more than one card, so they are flex columns. */
+.area-hero, .area-sidestack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s5);
+}
+.area-hero      { grid-area: hero; }
+.area-sidestack { grid-area: sidestack; }
+
+/* Single-card areas fill their track so row edges line up — this is
+   what makes the crash card's bottom meet the stat row's bottom. */
+.area-portfolio > .card,
+.area-crash > .card,
+.area-fan > .card,
+.area-corr > .card,
+.area-frontier > .card { height: 100%; }
+
+/* On narrower screens, collapse to a single column in reading order */
 @media (max-width: 1100px) {
-  .cockpit { grid-template-columns: 1fr; }
-}
-
-.cockpit-left, .cockpit-right {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s5);
-}
-.cockpit-center {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s5);
+  .cockpit {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "portfolio"
+      "hero"
+      "crash"
+      "sidestack"
+      "fan"
+      "corr"
+      "frontier";
+  }
 }
 
 /* ---- Section headers inside cards ---- */
@@ -40,6 +77,16 @@
   font-size: var(--fs-xs);
   color: var(--text-muted);
 }
+
+/* The correlation card lives in a 360px column, where a title plus an
+   inline note no longer fit on one line. Stack them there rather than
+   letting the title wrap mid-phrase. */
+.area-corr .section-head {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+.area-corr .section-title { white-space: nowrap; }
 
 /* ---- Portfolio builder ---- */
 .builder { display: flex; flex-direction: column; gap: var(--s4); }
@@ -233,17 +280,8 @@
 .replay-row:disabled { opacity: 0.5; cursor: not-allowed; }
 .replay-row:disabled:hover { background: var(--bg-panel); }
 
-/* ---- Deeper analysis row: heatmap + frontier side by side ---- */
-.analysis-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--s5);
-  margin-top: var(--s5);
-}
-@media (max-width: 1100px) {
-  .analysis-row { grid-template-columns: 1fr; }
-}
-.analysis-card { min-height: 200px; }
+/* .analysis-row / .analysis-card removed: the heatmap and frontier
+   are now grid areas inside .cockpit (see the top of this file). */
 
 /* Subtle "just recomputed" pulse on the hero value */
 @keyframes heroPulse {

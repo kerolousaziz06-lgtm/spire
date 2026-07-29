@@ -85,13 +85,13 @@ export function StressTest() {
       />
 
       <div className="cockpit">
-        {/* LEFT: read-only summary that opens the editor modal */}
-        <aside className="cockpit-left">
+        {/* Read-only summary that opens the editor modal */}
+        <aside className="area-portfolio">
           <PortfolioSummary holdings={holdings} onOpen={() => setEditorOpen(true)} />
         </aside>
 
-        {/* CENTER: hero + stats + fan chart */}
-        <section className="cockpit-center">
+        {/* Hero + the three stat cards beneath it */}
+        <section className="area-hero">
           <Card glow delay={1} className="hero">
             <div className="hero-top">
               <div className="hero-label">MEDIAN PROJECTED VALUE · {years} {years === 1 ? 'YEAR' : 'YEARS'}</div>
@@ -137,7 +137,10 @@ export function StressTest() {
             <StatCard label="Chance of loss" value={fmtPct(result.probLoss)}
               hint="of ending below start" delay={4} />
           </div>
+        </section>
 
+        {/* Forward forecast, or the selected crash replay */}
+        <section className="area-fan">
           <Card delay={5} className="chart-card">
             {viewMode === 'forecast' || !activeCrash ? (
               <>
@@ -165,8 +168,8 @@ export function StressTest() {
           </Card>
         </section>
 
-        {/* RIGHT: crash replays + risk + retirement */}
-        <aside className="cockpit-right">
+        {/* Crash replays — top right, alongside the hero */}
+        <aside className="area-crash">
           <Card delay={2}>
             <h2 className="section-title" style={{ marginBottom: 'var(--s4)' }}>Historical Crash Replay</h2>
             <div className="replay-list">
@@ -184,7 +187,10 @@ export function StressTest() {
             </div>
             <p className="replay-note">Click a crisis to replay your portfolio through it.</p>
           </Card>
+        </aside>
 
+        {/* Risk readouts — left column, below the portfolio */}
+        <aside className="area-sidestack">
           <Card delay={4}>
             <h2 className="section-title" style={{ marginBottom: 'var(--s4)' }}>Risk Profile</h2>
             <div className="risk-list">
@@ -196,25 +202,28 @@ export function StressTest() {
 
           <RetirementCard />
         </aside>
-      </div>
 
-      {/* ---- DEEPER ANALYSIS: correlation heatmap + efficient frontier ---- */}
-      <div className="analysis-row">
-        <Card delay={1} className="analysis-card">
-          <div className="section-head">
-            <h2 className="section-title">How Your Assets Move Together</h2>
-            <span className="section-note">correlation · hover a cell</span>
-          </div>
-          <CorrelationHeatmap holdings={holdings} />
-        </Card>
+        {/* Correlation — bottom right, beside the fan chart */}
+        <section className="area-corr">
+          <Card delay={6}>
+            <div className="section-head">
+              <h2 className="section-title">How Your Assets Move Together</h2>
+              <span className="section-note">correlation · hover a cell</span>
+            </div>
+            <CorrelationHeatmap holdings={holdings} />
+          </Card>
+        </section>
 
-        <Card delay={2} className="analysis-card">
-          <div className="section-head">
-            <h2 className="section-title">Risk vs. Return Frontier</h2>
-            <span className="section-note">Modern Portfolio Theory</span>
-          </div>
-          <EfficientFrontier cloud={frontier.cloud} current={frontier.current} />
-        </Card>
+        {/* Frontier — spans all three columns, closing the old dead space */}
+        <section className="area-frontier">
+          <Card delay={7}>
+            <div className="section-head">
+              <h2 className="section-title">Risk vs. Return Frontier</h2>
+              <span className="section-note">Modern Portfolio Theory</span>
+            </div>
+            <EfficientFrontier cloud={frontier.cloud} current={frontier.current} />
+          </Card>
+        </section>
       </div>
 
       {/* The editor modal — only rendered when open. Save commits the

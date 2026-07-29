@@ -7,17 +7,51 @@
 // bright marker — you can see if it sits near the frontier (efficient)
 // or below it (leaving return on the table for its risk).
 // ============================================================
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { FrontierPoint } from '../lib/risk';
 import { fmtPct } from '../lib/format';
 import './EfficientFrontier.css';
 
 type Props = { cloud: FrontierPoint[]; current: FrontierPoint | null };
 
-const W = 460, H = 300, PAD_L = 44, PAD_R = 16, PAD_T = 16, PAD_B = 36;
+// Geometry only — these constants set the pixel canvas, not the math.
+// xAt/yAt below map (risk, return) onto it, so the plotted data is
+// unchanged by a reshape; only the canvas it lands on changes.
+//
+// Two shapes, because this card's width changes drastically at the grid's
+// 1100px breakpoint:
+//
+//   WIDE   — the card spans all three grid columns, ~1224-1352px inner
+//            width. A 460x300 canvas scaled to that would render ~840px
+//            tall, so the canvas goes wide and flat (7.9:1 → ~161-172px).
+//   NARROW — below 1100px the grid collapses to one column and the card
+//            can be as little as ~270px wide, where the flat ratio would
+//            squash the chart to ~34px. A near-square canvas is needed.
+//
+// A max-height cap is NOT an alternative here: with width:100% and
+// preserveAspectRatio, capping height letterboxes the SVG rather than
+// shrinking it. The viewBox ratio has to carry it.
+const WIDE   = { W: 1100, H: 140, PAD_L: 44, PAD_R: 16, PAD_T: 10, PAD_B: 34 };
+const NARROW = { W:  640, H: 280, PAD_L: 44, PAD_R: 16, PAD_T: 16, PAD_B: 36 };
+
+const WIDE_QUERY = '(min-width: 1100px)';
 
 export function EfficientFrontier({ cloud, current }: Props) {
   const [hoverCurrent, setHoverCurrent] = useState(false);
+
+  // Track the grid breakpoint so the canvas shape follows the card's width.
+  const [isWide, setIsWide] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia(WIDE_QUERY).matches
+  );
+  useEffect(() => {
+    const mq = window.matchMedia(WIDE_QUERY);
+    const onChange = (e: MediaQueryListEvent) => setIsWide(e.matches);
+    mq.addEventListener('change', onChange);
+    setIsWide(mq.matches);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+
+  const { W, H, PAD_L, PAD_R, PAD_T, PAD_B } = isWide ? WIDE : NARROW;
 
   if (cloud.length < 2) {
     return <div className="ef-empty">Hold at least two assets to map the risk–return frontier.</div>;
