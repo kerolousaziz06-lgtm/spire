@@ -112,21 +112,34 @@ body {
 :root {
   /* --- The ombre. Deep oxblood at the top washing to warm near-white
          at the bottom, per the reference image. --- */
-  --ombre-1: #2B0A0A;   /* top: deep oxblood   */
-  --ombre-2: #78271A;   /* upper-mid: brick    */
-  --ombre-3: #B25B41;   /* mid: terracotta     */
-  --ombre-4: #D9977B;   /* lower: warm clay    */
-  --ombre-5: #EBC3AE;   /* bottom: near-white  */
+  /* The pale end stops at a medium salmon rather than running to white.
+     This is not a compromise on the reference - it is what the reference
+     actually does. The two are in direct competition: the paler the wash
+     behind a card, the darker that card must be tinted to keep light text
+     legible. Measured, a near-white wash forced card tints heavy enough to
+     read as flat dark slabs. Stopping here lets the cards stay light AND
+     keeps every text token above AA. */
+  --ombre-1: #2E0B0B;   /* top: deep oxblood     */
+  --ombre-2: #7A2A1B;   /* upper-mid: brick      */
+  --ombre-3: #A85238;   /* mid: terracotta       */
+  --ombre-4: #BE6B4E;   /* lower: warm clay      */
+  --ombre-5: #C8876E;   /* bottom: light salmon  */
 
   /* --- Glass. The tint DEEPENS toward the bottom of the page. That is
          what keeps light text readable once the gradient behind it goes
          pale — the panel carries the contrast, not the text colour, which
          is how the cards read in the reference. --- */
-  --glass-hi:  rgba(43, 12, 10, 0.34);   /* row 1 — sits on dark bg   */
-  --glass-mid: rgba(50, 15, 12, 0.44);   /* row 2 — sits on mid bg    */
-  --glass-lo:  rgba(56, 18, 14, 0.62);   /* row 3 — sits on pale bg   */
-  --glass-border: rgba(255, 236, 230, 0.16);
-  --glass-blur:   18px;
+  /* Kept as light as the contrast measurements allow. Light text on the bare
+     wash at row 3 measures 1.62:1 - illegible - so these cannot go to a pure
+     white-lift glass; the tint has to darken. What makes them read as GLASS
+     rather than as flat dark slabs is the white lift + specular top edge +
+     brighter border + heavier blur applied in the .card rule below, not a
+     weaker tint. */
+  --glass-hi:  rgba(46, 13, 10, 0.22);   /* row 1 — sits on dark bg   */
+  --glass-mid: rgba(52, 16, 12, 0.34);   /* row 2 — sits on mid bg    */
+  --glass-lo:  rgba(58, 19, 14, 0.46);   /* row 3 — sits on pale bg   */
+  --glass-border: rgba(255, 238, 232, 0.24);
+  --glass-blur:   24px;
 
   /* --- Retinted core tokens --- */
   --bg-base:       var(--ombre-1);
@@ -138,8 +151,11 @@ body {
 
   /* Text stays light at every depth, by explicit instruction. */
   --text-primary:   #FFF4EF;
-  --text-secondary: rgba(255, 240, 234, 0.82);
-  --text-muted:     rgba(255, 234, 226, 0.80);   /* 0.62 measured only 3.3:1 on the row-3 glass; 0.80 clears AA 4.5 */
+  --text-secondary: rgba(255, 242, 238, 0.93);
+  /* Alphas are set by measurement, not taste. On the lighter glass even pure
+     white only reaches ~5.3:1, so secondary/muted have little room; the visual
+     hierarchy is carried by size and weight instead. */
+  --text-muted:     rgba(255, 238, 232, 0.88);
 
   /* Accent: coral, taken from the reference in place of the blue. */
   --accent:        #FF6A4D;
@@ -172,7 +188,7 @@ body {
 .app-shell {
   background:
     /* soft white bloom low-centre, the "to white" part of the wash */
-    radial-gradient(120% 60% at 50% 108%, rgba(255, 248, 244, 0.55), transparent 62%),
+    radial-gradient(120% 55% at 50% 108%, rgba(255, 248, 244, 0.30), transparent 60%),
     linear-gradient(180deg,
       var(--ombre-1) 0%,
       var(--ombre-2) 28%,
@@ -194,26 +210,48 @@ body.v2 {
 body.v2 .tabular { font-family: var(--font-mono); letter-spacing: -0.02em; }
 
 /* ---- Glass cards ----
-   Now the default for .card rather than an opt-in class. */
+   Default for .card rather than an opt-in class.
+
+   Three layers, in paint order: a white lift that catches the light like a
+   real pane, then the depth tint that carries text contrast, over the blurred
+   backdrop. The inset highlight is the specular top edge that sells it as
+   glass; without it the card reads as a flat panel no matter how light the
+   tint is. */
 .card {
-  background: var(--glass-hi);
-  backdrop-filter: blur(var(--glass-blur)) saturate(135%);
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(135%);
+  background:
+    linear-gradient(180deg, rgba(255, 242, 238, 0.12), rgba(255, 242, 238, 0.03) 55%, rgba(255, 242, 238, 0.05)),
+    var(--glass-hi);
+  backdrop-filter: blur(var(--glass-blur)) saturate(150%);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(150%);
   border: 1px solid var(--glass-border);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 246, 242, 0.22),
+    inset 0 -1px 0 rgba(80, 24, 18, 0.18),
+    var(--shadow-card);
 }
 
-/* Deepen the tint by row so light text survives the pale end of the wash. */
+/* Only the depth tint changes by row; the lift and highlight stay constant so
+   every card reads as the same material. */
 .area-risk > .card,
 .area-fan > .card,
-.area-corr > .card       { background: var(--glass-mid); }
+.area-corr > .card {
+  background:
+    linear-gradient(180deg, rgba(255, 242, 238, 0.12), rgba(255, 242, 238, 0.03) 55%, rgba(255, 242, 238, 0.05)),
+    var(--glass-mid);
+}
 .area-money > .card,
-.area-frontier > .card   { background: var(--glass-lo); }
+.area-frontier > .card {
+  background:
+    linear-gradient(180deg, rgba(255, 242, 238, 0.12), rgba(255, 242, 238, 0.03) 55%, rgba(255, 242, 238, 0.05)),
+    var(--glass-lo);
+}
 
-/* Hero keeps a coral edge, but as glass rather than a solid fill. */
+/* Hero: same material, coral edge. */
 .card--glow {
-  background: var(--glass-hi);
   border: 1px solid var(--accent-glow);
-  box-shadow: var(--shadow-glow);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 246, 242, 0.24),
+    var(--shadow-glow);
 }
 
 /* The sidebar floats on the same wash. Its icons are unchanged. */
