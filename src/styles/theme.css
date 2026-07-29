@@ -234,13 +234,13 @@ body.v2 .tabular { font-family: var(--font-mono); letter-spacing: -0.02em; }
    every card reads as the same material. */
 .area-risk > .card,
 .area-fan > .card,
-.area-corr > .card {
+.area-sidechart > .card {
   background:
     linear-gradient(180deg, rgba(255, 242, 238, 0.12), rgba(255, 242, 238, 0.03) 55%, rgba(255, 242, 238, 0.05)),
     var(--glass-mid);
 }
 .area-money > .card,
-.area-frontier > .card {
+.area-widechart > .card {
   background:
     linear-gradient(180deg, rgba(255, 242, 238, 0.12), rgba(255, 242, 238, 0.03) 55%, rgba(255, 242, 238, 0.05)),
     var(--glass-lo);

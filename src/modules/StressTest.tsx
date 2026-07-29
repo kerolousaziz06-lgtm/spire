@@ -207,25 +207,29 @@ export function StressTest() {
           <RetirementCard />
         </aside>
 
-        {/* Correlation — middle right, beside the fan chart */}
-        <section className="area-corr">
+        {/* Narrow slot, middle right. The frontier goes here: it is a fixed
+            scatter of the same cloud whatever the portfolio holds, so it
+            reads fine at 360px and never grows. */}
+        <section className="area-sidechart">
           <Card delay={6}>
-            <div className="section-head">
-              <h2 className="section-title">How Your Assets Move Together</h2>
-              <span className="section-note">correlation · hover a cell</span>
-            </div>
-            <CorrelationHeatmap holdings={holdings} />
-          </Card>
-        </section>
-
-        {/* Frontier — spans all three columns, closing the old dead space */}
-        <section className="area-frontier">
-          <Card delay={7}>
             <div className="section-head">
               <h2 className="section-title">Risk vs. Return Frontier</h2>
               <span className="section-note">Modern Portfolio Theory</span>
             </div>
             <EfficientFrontier cloud={frontier.cloud} current={frontier.current} />
+          </Card>
+        </section>
+
+        {/* Wide bottom slot. The correlation matrix goes here because it is
+            the one chart whose size scales with the portfolio — it draws an
+            N x N grid, one row and column per holding, so it needs the width. */}
+        <section className="area-widechart">
+          <Card delay={7}>
+            <div className="section-head">
+              <h2 className="section-title">How Your Assets Move Together</h2>
+              <span className="section-note">correlation · hover a cell</span>
+            </div>
+            <CorrelationHeatmap holdings={holdings} />
           </Card>
         </section>
       </div>

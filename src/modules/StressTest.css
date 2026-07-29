@@ -28,8 +28,8 @@
   grid-template-columns: 300px minmax(0, 1fr) 360px;
   grid-template-areas:
     "portfolio hero     crash"
-    "risk      fan      corr"
-    "money     frontier frontier";
+    "risk      fan      sidechart"
+    "money     widechart widechart";
   gap: var(--grid-gap);
   align-items: stretch;
 
@@ -69,8 +69,12 @@
 .area-risk      { grid-area: risk; }
 .area-money     { grid-area: money; }
 .area-fan       { grid-area: fan; }
-.area-corr      { grid-area: corr; }
-.area-frontier  { grid-area: frontier; }
+/* Positional names, not content names: which chart lives in which slot is a
+   layout decision that has already changed once. The narrow slot holds the
+   frontier (a scatter reads fine small); the wide bottom slot holds the
+   correlation matrix, which grows N x N with the portfolio and needs width. */
+.area-sidechart { grid-area: sidechart; }
+.area-widechart { grid-area: widechart; }
 
 /* The hero area stacks the median card above the three stat cards. */
 .area-hero {
@@ -89,22 +93,22 @@
 .area-risk > .card,
 .area-money > .card,
 .area-fan > .card,
-.area-corr > .card,
-.area-frontier > .card { height: 100%; }
+.area-sidechart > .card,
+.area-widechart > .card { height: 100%; }
 
 /* Chart cards are flex columns: header keeps its natural height, the chart
    itself takes everything left. Without this the charts would still size
    themselves from their width and overflow the track. */
 .area-fan > .card,
-.area-corr > .card,
-.area-frontier > .card {
+.area-sidechart > .card,
+.area-widechart > .card {
   display: flex;
   flex-direction: column;
 }
 .area-fan > .card > .fan-wrap,
 .area-fan > .card > .crash-wrap,
-.area-corr > .card > .heat,
-.area-frontier > .card > .ef {
+.area-sidechart > .card > .ef,
+.area-widechart > .card > .heat {
   flex: 1;
   min-height: 0;
 }
@@ -130,8 +134,8 @@
       "risk"
       "money"
       "fan"
-      "corr"
-      "frontier";
+      "sidechart"
+      "widechart";
   }
 }
 
@@ -152,15 +156,14 @@
   color: var(--text-muted);
 }
 
-/* The correlation card lives in a 360px column, where a title plus an
-   inline note no longer fit on one line. Stack them there rather than
-   letting the title wrap mid-phrase. */
-.area-corr .section-head {
+/* The narrow slot is 360px, where a title plus an inline note does not fit on
+   one line. Stack them there rather than letting the title wrap mid-phrase. */
+.area-sidechart .section-head {
   flex-direction: column;
   align-items: flex-start;
   gap: 2px;
 }
-.area-corr .section-title { white-space: nowrap; }
+.area-sidechart .section-title { white-space: nowrap; }
 
 /* ---- Portfolio builder ---- */
 .builder { display: flex; flex-direction: column; gap: var(--s4); }
