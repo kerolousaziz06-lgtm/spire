@@ -97,68 +97,136 @@ body {
 }
 
 /* ============================================================
-   V2 THEME LAYER — sleek/modern pass.
-   Warm-amber accent, gradient depth, glass, editorial + mono type.
-   Added on top so we can tune the new look in one place.
+   OMBRE THEME LAYER — red-to-white gradient + glassmorphism.
+
+   This overrides the cool/near-black tokens above. It deliberately
+   reverses what CLAUDE.md previously listed as a rejected direction
+   ("warm gold palettes", "ambient warm-terracotta gradients"); the
+   change was requested explicitly, against a supplied reference.
+
+   Everything here is a token override, which is why it reaches the
+   whole app: --bg-panel alone is referenced 32 times across the
+   components, so retinting it retints every inner chip, track and
+   input without touching a single component file.
    ============================================================ */
 :root {
-  /* Warm metallic accent (replaces blue as the star) */
-  --gold:        #E8B15C;
-  --gold-bright: #F5C978;
-  --gold-dim:    rgba(232,177,92,0.12);
-  --gold-glow:   rgba(232,177,92,0.30);
+  /* --- The ombre. Deep oxblood at the top washing to warm near-white
+         at the bottom, per the reference image. --- */
+  --ombre-1: #2B0A0A;   /* top: deep oxblood   */
+  --ombre-2: #78271A;   /* upper-mid: brick    */
+  --ombre-3: #B25B41;   /* mid: terracotta     */
+  --ombre-4: #D9977B;   /* lower: warm clay    */
+  --ombre-5: #EBC3AE;   /* bottom: near-white  */
 
-  /* Electric edge colors (photo 2 vibe) — used sparingly for glow */
-  --electric-1: #7C5CFF;   /* violet */
-  --electric-2: #3BE0C0;   /* teal-green */
+  /* --- Glass. The tint DEEPENS toward the bottom of the page. That is
+         what keeps light text readable once the gradient behind it goes
+         pale — the panel carries the contrast, not the text colour, which
+         is how the cards read in the reference. --- */
+  --glass-hi:  rgba(43, 12, 10, 0.34);   /* row 1 — sits on dark bg   */
+  --glass-mid: rgba(50, 15, 12, 0.44);   /* row 2 — sits on mid bg    */
+  --glass-lo:  rgba(56, 18, 14, 0.62);   /* row 3 — sits on pale bg   */
+  --glass-border: rgba(255, 236, 230, 0.16);
+  --glass-blur:   18px;
 
-  /* Glass surfaces */
-  --glass-bg:     rgba(22, 26, 34, 0.55);
-  --glass-border: rgba(255,255,255,0.10);
-  --glass-blur:   16px;
+  /* --- Retinted core tokens --- */
+  --bg-base:       var(--ombre-1);
+  --bg-panel:      rgba(38, 10, 8, 0.34);  /* inner chips/tracks/inputs */
+  --bg-card:       var(--glass-mid);
+  --bg-card-hover: rgba(255, 240, 235, 0.13);
+  --border:        rgba(255, 236, 230, 0.14);
+  --border-strong: rgba(255, 236, 230, 0.24);
 
-  /* Fonts */
-  --font-display: 'Instrument Serif', Georgia, serif;   /* editorial headlines */
-  --font-grotesk: 'Space Grotesk', 'Inter', sans-serif; /* modern sans headings */
-  --font-mono:    'JetBrains Mono', 'SF Mono', monospace; /* terminal numbers */
+  /* Text stays light at every depth, by explicit instruction. */
+  --text-primary:   #FFF4EF;
+  --text-secondary: rgba(255, 240, 234, 0.82);
+  --text-muted:     rgba(255, 234, 226, 0.80);   /* 0.62 measured only 3.3:1 on the row-3 glass; 0.80 clears AA 4.5 */
+
+  /* Accent: coral, taken from the reference in place of the blue. */
+  --accent:        #FF6A4D;
+  --accent-bright: #FF8E75;
+  --accent-dim:    rgba(255, 106, 77, 0.18);
+  --accent-glow:   rgba(255, 106, 77, 0.38);
+
+  /* Gain/loss. On a red background a saturated red loss chip nearly
+     vanishes — visible in the reference, where the -39.3% chips sink into
+     their own panel. So the chip earns its contrast from a DARK backing
+     rather than from hue alone, and the arrow still carries the meaning
+     for anyone who cannot separate the hues at all. */
+  --gain:     #7DE8A6;
+  --loss:     #FFB3A5;
+  --gain-dim: rgba(6, 56, 32, 0.55);
+  --loss-dim: rgba(118, 16, 10, 0.58);
+
+  /* Softer, warmer elevation — hard black shadows read as dirt on glass. */
+  --shadow-card: 0 1px 2px rgba(40, 8, 6, 0.28), 0 10px 30px rgba(40, 8, 6, 0.22);
+  --shadow-glow: 0 0 0 1px var(--accent-glow), 0 10px 36px rgba(255, 106, 77, 0.20);
+
+  /* Fonts (the --font-display serif was unused and is gone) */
+  --font-grotesk: 'Space Grotesk', 'Inter', sans-serif;
+  --font-mono:    'JetBrains Mono', 'SF Mono', monospace;
 }
 
-/* Richer background: deep near-black with a warm+cool gradient wash */
+/* The gradient is scoped to .app-shell, NOT body. body.v2's background is
+   shared with the Landing page, which is a separate unfinished design and
+   must keep its own look. */
+.app-shell {
+  background:
+    /* soft white bloom low-centre, the "to white" part of the wash */
+    radial-gradient(120% 60% at 50% 108%, rgba(255, 248, 244, 0.55), transparent 62%),
+    linear-gradient(180deg,
+      var(--ombre-1) 0%,
+      var(--ombre-2) 28%,
+      var(--ombre-3) 60%,
+      var(--ombre-4) 84%,
+      var(--ombre-5) 100%);
+}
+
+/* Landing keeps the original dark treatment. */
 body.v2 {
   background:
     radial-gradient(1000px 600px at 12% -8%, rgba(232,177,92,0.06), transparent 55%),
     radial-gradient(900px 600px at 100% 5%, rgba(124,92,255,0.07), transparent 55%),
-    radial-gradient(700px 500px at 50% 110%, rgba(59,224,192,0.04), transparent 60%),
     #08090C;
   background-attachment: fixed;
 }
 
-/* Mono numbers everywhere the .tabular class is used, in v2 */
+/* Mono numbers everywhere .tabular is used */
 body.v2 .tabular { font-family: var(--font-mono); letter-spacing: -0.02em; }
 
-/* Glass card treatment (opt-in via .glass) */
-.glass {
-  background: var(--glass-bg) !important;
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
-  border: 1px solid var(--glass-border) !important;
+/* ---- Glass cards ----
+   Now the default for .card rather than an opt-in class. */
+.card {
+  background: var(--glass-hi);
+  backdrop-filter: blur(var(--glass-blur)) saturate(135%);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(135%);
+  border: 1px solid var(--glass-border);
 }
 
-/* Electric edge glow (opt-in via .electric) */
-.electric {
-  position: relative;
+/* Deepen the tint by row so light text survives the pale end of the wash. */
+.area-risk > .card,
+.area-fan > .card,
+.area-corr > .card       { background: var(--glass-mid); }
+.area-money > .card,
+.area-frontier > .card   { background: var(--glass-lo); }
+
+/* Hero keeps a coral edge, but as glass rather than a solid fill. */
+.card--glow {
+  background: var(--glass-hi);
+  border: 1px solid var(--accent-glow);
+  box-shadow: var(--shadow-glow);
 }
-.electric::after {
-  content: '';
-  position: absolute; inset: 0;
-  border-radius: inherit;
-  padding: 1px;
-  background: linear-gradient(135deg, var(--electric-1), var(--electric-2));
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor; mask-composite: exclude;
-  opacity: 0.6;
-  pointer-events: none;
+
+/* The sidebar floats on the same wash. Its icons are unchanged. */
+.sidebar {
+  background: rgba(34, 9, 7, 0.42);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border-right: 1px solid var(--glass-border);
 }
+
+/* Scrollbars on a warm ground */
+::-webkit-scrollbar-thumb { background: rgba(255, 236, 230, 0.22); }
+::-webkit-scrollbar-thumb:hover { background: rgba(255, 236, 230, 0.34); }
 
 /* Count-up + reveal helpers */
 @keyframes revealUp {

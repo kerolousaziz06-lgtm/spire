@@ -15,13 +15,17 @@ import './CorrelationHeatmap.css';
 
 type Props = { holdings: Holding[] };
 
+// Divergent two-hue scale, tuned to stay legible on the warm ground:
+// blue for "move together", cream-amber for "move oppositely". Amber alone
+// was too close to the background red to read, so the negative end is
+// lifted toward cream.
 function corrColor(r: number): string {
   if (r >= 0) {
-    const a = 0.12 + r * 0.68;
-    return `rgba(59, 130, 246, ${a.toFixed(3)})`;
+    const a = 0.18 + r * 0.62;
+    return `rgba(96, 132, 255, ${a.toFixed(3)})`;
   } else {
-    const a = 0.12 + Math.abs(r) * 0.68;
-    return `rgba(212, 169, 76, ${a.toFixed(3)})`;
+    const a = 0.18 + Math.abs(r) * 0.62;
+    return `rgba(255, 206, 130, ${a.toFixed(3)})`;
   }
 }
 
@@ -92,9 +96,9 @@ export function CorrelationHeatmap({ holdings }: Props) {
           </span>
         ) : (
           <span className="heat-legend">
-            <span className="heat-key"><span className="heat-swatch" style={{ background: 'rgba(59,130,246,0.7)' }} /> together</span>
-            <span className="heat-key"><span className="heat-swatch" style={{ background: 'rgba(120,130,150,0.3)' }} /> independent</span>
-            <span className="heat-key"><span className="heat-swatch" style={{ background: 'rgba(212,169,76,0.7)' }} /> opposite</span>
+            <span className="heat-key"><span className="heat-swatch" style={{ background: 'rgba(96,132,255,0.8)' }} /> together</span>
+            <span className="heat-key"><span className="heat-swatch" style={{ background: 'rgba(255,236,230,0.22)' }} /> independent</span>
+            <span className="heat-key"><span className="heat-swatch" style={{ background: 'rgba(255,206,130,0.8)' }} /> opposite</span>
           </span>
         )}
       </div>

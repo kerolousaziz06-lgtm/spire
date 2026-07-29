@@ -27,23 +27,23 @@ export const ASSETS: Asset[] = [
   // ---- Stocks & equity indexes ----
   { id: 'us_stocks',   name: 'S&P 500 (US Large Cap)', short: 'S&P 500',  category: 'stock', expReturn: 0.070, volatility: 0.155, color: 'var(--accent)' },
   { id: 'nasdaq',      name: 'Nasdaq 100 (QQQ)',       short: 'Nasdaq',   category: 'stock', expReturn: 0.085, volatility: 0.200, color: 'var(--accent-bright)' },
-  { id: 'small_cap',   name: 'US Small Cap',           short: 'Small Cap',category: 'stock', expReturn: 0.075, volatility: 0.210, color: '#5B8DEF' },
-  { id: 'intl_stocks', name: 'International Stocks',    short: 'Intl.',    category: 'stock', expReturn: 0.065, volatility: 0.170, color: '#7DA9F5' },
-  { id: 'emerging',    name: 'Emerging Markets',       short: 'Emerging', category: 'stock', expReturn: 0.075, volatility: 0.240, color: '#4F86E0' },
+  { id: 'small_cap',   name: 'US Small Cap',           short: 'Small Cap',category: 'stock', expReturn: 0.075, volatility: 0.210, color: '#FFB37A' },
+  { id: 'intl_stocks', name: 'International Stocks',    short: 'Intl.',    category: 'stock', expReturn: 0.065, volatility: 0.170, color: '#FFD9A0' },
+  { id: 'emerging',    name: 'Emerging Markets',       short: 'Emerging', category: 'stock', expReturn: 0.075, volatility: 0.240, color: '#FF8FA3' },
 
   // ---- Bonds & fixed income ----
-  { id: 'bonds',       name: 'US Bonds (Aggregate)',   short: 'Bonds',    category: 'bond',  expReturn: 0.035, volatility: 0.055, color: '#8B93A7' },
-  { id: 'tips',        name: 'Treasury TIPS',          short: 'TIPS',     category: 'bond',  expReturn: 0.030, volatility: 0.050, color: '#9AA0B4' },
-  { id: 'hy_bonds',    name: 'High-Yield Bonds',       short: 'HY Bonds', category: 'bond',  expReturn: 0.050, volatility: 0.100, color: '#A8AEC0' },
+  { id: 'bonds',       name: 'US Bonds (Aggregate)',   short: 'Bonds',    category: 'bond',  expReturn: 0.035, volatility: 0.055, color: '#9FC7FF' },
+  { id: 'tips',        name: 'Treasury TIPS',          short: 'TIPS',     category: 'bond',  expReturn: 0.030, volatility: 0.050, color: '#C3D9FF' },
+  { id: 'hy_bonds',    name: 'High-Yield Bonds',       short: 'HY Bonds', category: 'bond',  expReturn: 0.050, volatility: 0.100, color: '#B8A7FF' },
 
   // ---- Cash-like ----
-  { id: 'savings',     name: 'Savings / HYSA',         short: 'Savings',  category: 'cashlike', expReturn: 0.040, volatility: 0.005, color: '#6E7686' },
-  { id: 'cd',          name: 'Certificate of Deposit', short: 'CD',       category: 'cashlike', expReturn: 0.045, volatility: 0.003, color: '#5E6675' },
-  { id: 'cash',        name: 'Cash (Checking)',        short: 'Cash',     category: 'cashlike', expReturn: 0.000, volatility: 0.000, color: '#4B5568' },
+  { id: 'savings',     name: 'Savings / HYSA',         short: 'Savings',  category: 'cashlike', expReturn: 0.040, volatility: 0.005, color: '#8FE3C2' },
+  { id: 'cd',          name: 'Certificate of Deposit', short: 'CD',       category: 'cashlike', expReturn: 0.045, volatility: 0.003, color: '#B6F0D8' },
+  { id: 'cash',        name: 'Cash (Checking)',        short: 'Cash',     category: 'cashlike', expReturn: 0.000, volatility: 0.000, color: '#EFDCD3' },
 
   // ---- Alternatives ----
-  { id: 'reits',       name: 'Real Estate (REITs)',    short: 'REITs',    category: 'alt',   expReturn: 0.065, volatility: 0.190, color: '#A78BFA' },
-  { id: 'gold',        name: 'Gold',                   short: 'Gold',     category: 'alt',   expReturn: 0.040, volatility: 0.150, color: '#D4A94C' },
+  { id: 'reits',       name: 'Real Estate (REITs)',    short: 'REITs',    category: 'alt',   expReturn: 0.065, volatility: 0.190, color: '#D9A7FF' },
+  { id: 'gold',        name: 'Gold',                   short: 'Gold',     category: 'alt',   expReturn: 0.040, volatility: 0.150, color: '#FFD75E' },
 ];
 
 export const ASSET_BY_ID: Record<string, Asset> =
