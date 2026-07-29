@@ -85,6 +85,16 @@
   min-height: 0;
 }
 
+/* The stat row absorbs the leftover height of the area so its cards' bottom
+   edge lines up with Your Portfolio and Historical Crash Replay either side.
+   Without this the hero card and stat row both sit at their natural height
+   and the column stops short of the row, while the neighbouring single-card
+   areas stretch to fill it — leaving the stat cards visibly high. */
+.area-hero .stat-row {
+  flex: 1;
+  min-height: 0;
+}
+
 /* Single-card areas fill their track so row edges line up — this is what
    makes the crash card meet the stat row's bottom, and the retirement
    card meet the frontier's bottom. */
