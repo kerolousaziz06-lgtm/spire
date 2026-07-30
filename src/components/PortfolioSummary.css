@@ -21,7 +21,7 @@
   border-radius: 6px; cursor: pointer; transition: color 160ms ease, background 160ms ease;
 }
 .ps-toggle button:hover { color: var(--text-secondary); }
-.ps-toggle button.is-active { background: var(--accent); color: #fff; }
+.ps-toggle button.is-active { background: var(--accent); color: var(--bg-base); }
 
 /* The clickable area (list + bar + total). Strip button styling. */
 .ps-open {

@@ -37,7 +37,7 @@
   z-index: 2;
 }
 .heat-cell.is-diag { opacity: 0.5; }
-.heat-val { font-size: var(--fs-xs); font-weight: 600; color: #fff; opacity: 0.9; }
+.heat-val { font-size: var(--fs-xs); font-weight: 600; color: var(--text-primary); opacity: 0.9; }
 
 .heat-footer { min-height: 20px; }
 .heat-explain { font-size: var(--fs-sm); color: var(--text-secondary); }

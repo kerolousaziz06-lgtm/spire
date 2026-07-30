@@ -15,18 +15,15 @@ import './CorrelationHeatmap.css';
 
 type Props = { holdings: Holding[] };
 
-// Divergent two-hue scale, tuned to stay legible on the warm ground:
-// blue for "move together", cream-amber for "move oppositely". Amber alone
-// was too close to the background red to read, so the negative end is
-// lifted toward cream.
+// Divergent two-hue scale: cool slate for "move together", brass for "move
+// oppositely". The hues live in theme.css as RGB triplets so this stays a
+// single source of truth — rgba() accepts a custom property holding
+// "r, g, b", which is why they are stored in that form.
 function corrColor(r: number): string {
-  if (r >= 0) {
-    const a = 0.18 + r * 0.62;
-    return `rgba(96, 132, 255, ${a.toFixed(3)})`;
-  } else {
-    const a = 0.18 + Math.abs(r) * 0.62;
-    return `rgba(255, 206, 130, ${a.toFixed(3)})`;
-  }
+  const a = (0.16 + Math.abs(r) * 0.60).toFixed(3);
+  return r >= 0
+    ? `rgba(var(--corr-together), ${a})`
+    : `rgba(var(--corr-opposite), ${a})`;
 }
 
 function plainEnglish(r: number): string {
@@ -96,9 +93,9 @@ export function CorrelationHeatmap({ holdings }: Props) {
           </span>
         ) : (
           <span className="heat-legend">
-            <span className="heat-key"><span className="heat-swatch" style={{ background: 'rgba(96,132,255,0.8)' }} /> together</span>
-            <span className="heat-key"><span className="heat-swatch" style={{ background: 'rgba(255,236,230,0.22)' }} /> independent</span>
-            <span className="heat-key"><span className="heat-swatch" style={{ background: 'rgba(255,206,130,0.8)' }} /> opposite</span>
+            <span className="heat-key"><span className="heat-swatch" style={{ background: 'rgba(var(--corr-together), 0.78)' }} /> together</span>
+            <span className="heat-key"><span className="heat-swatch" style={{ background: 'rgba(236,231,219,0.20)' }} /> independent</span>
+            <span className="heat-key"><span className="heat-swatch" style={{ background: 'rgba(var(--corr-opposite), 0.78)' }} /> opposite</span>
           </span>
         )}
       </div>

@@ -38,9 +38,9 @@ export function LogoMark({ size = 28, style }: IconProps) {
       {/* the prism triangle */}
       <path d="M12 8 L20 16 L12 24 Z" stroke="var(--accent-bright)" strokeWidth="1.75" strokeLinejoin="round" fill="var(--accent-dim)" />
       {/* the fan of outgoing futures */}
-      <path d="M20 16 L29 9"  stroke="#60A5FA" strokeWidth="1.75" strokeLinecap="round" opacity="0.9" />
-      <path d="M20 16 L29 16" stroke="#3B82F6" strokeWidth="1.75" strokeLinecap="round" opacity="0.7" />
-      <path d="M20 16 L29 23" stroke="#2563EB" strokeWidth="1.75" strokeLinecap="round" opacity="0.5" />
+      <path d="M20 16 L29 9"  stroke="var(--accent)" strokeWidth="1.75" strokeLinecap="round" opacity="0.85" />
+      <path d="M20 16 L29 16" stroke="var(--accent)" strokeWidth="1.75" strokeLinecap="round" opacity="0.55" />
+      <path d="M20 16 L29 23" stroke="var(--accent)" strokeWidth="1.75" strokeLinecap="round" opacity="0.30" />
     </svg>
   );
 }

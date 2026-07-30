@@ -34,7 +34,7 @@
 .ef-footer { display: flex; align-items: center; gap: var(--s4); flex-wrap: wrap; }
 .ef-key { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-xs); color: var(--text-muted); }
 .ef-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
-.ef-dot-you { background: #fff; border: 2px solid var(--accent-bright); }
+.ef-dot-you { background: var(--accent); border: 2px solid var(--accent-bright); }
 .ef-dot-cloud { background: var(--accent); opacity: 0.4; }
 .ef-line { width: 16px; height: 3px; border-radius: 3px; background: var(--accent-bright); display: inline-block; }
 .ef-current { margin-left: auto; font-size: var(--fs-xs); color: var(--accent-bright); font-weight: 600; }

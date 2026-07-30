@@ -97,179 +97,122 @@ body {
 }
 
 /* ============================================================
-   OMBRE THEME LAYER — red-to-white gradient + glassmorphism.
+   TERMINAL THEME LAYER — the Landing page's look, suite-wide.
 
-   This overrides the cool/near-black tokens above. It deliberately
-   reverses what CLAUDE.md previously listed as a rejected direction
-   ("warm gold palettes", "ambient warm-terracotta gradients"); the
-   change was requested explicitly, against a supplied reference.
+   Dark brown ground, bone ink, hairline rules, mono labels. Taken
+   straight from .ed in Landing.css so all three modules read as one
+   product. Replaces the red-to-white ombre and the glassmorphic cards.
 
-   Everything here is a token override, which is why it reaches the
-   whole app: --bg-panel alone is referenced 32 times across the
-   components, so retinting it retints every inner chip, track and
-   input without touching a single component file.
+   Structure is monochrome on purpose: the only hues in the app are
+   semantic (gain / loss / average, plus the correlation scale). That is
+   what gives the terminal feel — information carries colour, decoration
+   does not.
+
+   Everything below is a token override, which is why it reaches both
+   MonteVue and Vantage without editing either module.
    ============================================================ */
 :root {
-  /* --- The ombre. Deep oxblood at the top washing to warm near-white
-         at the bottom, per the reference image. --- */
-  /* The pale end stops at a medium salmon rather than running to white.
-     This is not a compromise on the reference - it is what the reference
-     actually does. The two are in direct competition: the paler the wash
-     behind a card, the darker that card must be tinted to keep light text
-     legible. Measured, a near-white wash forced card tints heavy enough to
-     read as flat dark slabs. Stopping here lets the cards stay light AND
-     keeps every text token above AA. */
-  --ombre-1: #2E0B0B;   /* top: deep oxblood     */
-  --ombre-2: #7A2A1B;   /* upper-mid: brick      */
-  --ombre-3: #A85238;   /* mid: terracotta       */
-  --ombre-4: #BE6B4E;   /* lower: warm clay      */
-  --ombre-5: #C8876E;   /* bottom: light salmon  */
+  /* --- Ground and surfaces. Flat, no gradient, no blur. --- */
+  --bg-base:       #17140F;   /* the ground, from Landing's --ground */
+  --bg-card:       #1C1811;   /* cards sit just above it */
+  --bg-card-hover: #262019;
+  --bg-panel:      #211C15;   /* inner chips, tracks, inputs */
 
-  /* --- Glass. The tint DEEPENS toward the bottom of the page. That is
-         what keeps light text readable once the gradient behind it goes
-         pale — the panel carries the contrast, not the text colour, which
-         is how the cards read in the reference. --- */
-  /* Kept as light as the contrast measurements allow. Light text on the bare
-     wash at row 3 measures 1.62:1 - illegible - so these cannot go to a pure
-     white-lift glass; the tint has to darken. What makes them read as GLASS
-     rather than as flat dark slabs is the white lift + specular top edge +
-     brighter border + heavier blur applied in the .card rule below, not a
-     weaker tint. */
-  --glass-hi:  rgba(46, 13, 10, 0.22);   /* row 1 — sits on dark bg   */
-  --glass-mid: rgba(52, 16, 12, 0.34);   /* row 2 — sits on mid bg    */
-  --glass-lo:  rgba(58, 19, 14, 0.46);   /* row 3 — sits on pale bg   */
-  --glass-border: rgba(255, 238, 232, 0.24);
-  --glass-blur:   24px;
+  /* Hairlines do the structural work that card fills used to. */
+  --border:        rgba(236, 231, 219, 0.13);
+  --border-strong: rgba(236, 231, 219, 0.26);
 
-  /* --- Retinted core tokens --- */
-  --bg-base:       var(--ombre-1);
-  --bg-panel:      rgba(38, 10, 8, 0.34);  /* inner chips/tracks/inputs */
-  --bg-card:       var(--glass-mid);
-  --bg-card-hover: rgba(255, 240, 235, 0.13);
-  --border:        rgba(255, 236, 230, 0.14);
-  --border-strong: rgba(255, 236, 230, 0.24);
+  /* --- Ink, from Landing's --light / --light-soft / --light-faint --- */
+  --text-primary:   #ECE7DB;
+  --text-secondary: rgba(236, 231, 219, 0.68);
+  --text-muted:     rgba(236, 231, 219, 0.56);   /* 0.46 measured 3.98:1; 0.56 clears AA 4.5 */
 
-  /* Text stays light at every depth, by explicit instruction. */
-  --text-primary:   #FFF4EF;
-  --text-secondary: rgba(255, 242, 238, 0.93);
-  /* Alphas are set by measurement, not taste. On the lighter glass even pure
-     white only reaches ~5.3:1, so secondary/muted have little room; the visual
-     hierarchy is carried by size and weight instead. */
-  --text-muted:     rgba(255, 238, 232, 0.88);
+  /* --- Accent: the bone itself. Active states invert rather than
+         colour in, which is the terminal move. --- */
+  --accent:        #ECE7DB;
+  --accent-bright: #FFFDF7;
+  --accent-dim:    rgba(236, 231, 219, 0.10);
+  --accent-glow:   rgba(236, 231, 219, 0.20);
 
-  /* Accent: coral, taken from the reference in place of the blue. */
-  --accent:        #FF6A4D;
-  --accent-bright: #FF8E75;
-  --accent-dim:    rgba(255, 106, 77, 0.18);
-  --accent-glow:   rgba(255, 106, 77, 0.38);
+  /* --- Semantic hues: the only colour in the app. Desaturated so they
+         sit in the palette instead of shouting out of it. Always paired
+         with an arrow, per the accessibility rule. --- */
+  --gain:     #9CBF7F;
+  --loss:     #D98E6A;
+  --warn:     #D4B36A;   /* the "average" verdict; was a hardcoded #D4A94C */
+  --gain-dim: rgba(156, 191, 127, 0.14);
+  --loss-dim: rgba(217, 142, 106, 0.14);
+  --warn-dim: rgba(212, 179, 106, 0.14);
 
-  /* Gain/loss. On a red background a saturated red loss chip nearly
-     vanishes — visible in the reference, where the -39.3% chips sink into
-     their own panel. So the chip earns its contrast from a DARK backing
-     rather than from hue alone, and the arrow still carries the meaning
-     for anyone who cannot separate the hues at all. */
-  --gain:     #7DE8A6;
-  --loss:     #FFB3A5;
-  --gain-dim: rgba(6, 56, 32, 0.55);
-  --loss-dim: rgba(118, 16, 10, 0.58);
+  /* Correlation scale needs two hues to read as divergent. */
+  --corr-together: 140, 166, 168;   /* cool slate */
+  --corr-opposite: 212, 179, 106;   /* brass */
 
-  /* Softer, warmer elevation — hard black shadows read as dirt on glass. */
-  --shadow-card: 0 1px 2px rgba(40, 8, 6, 0.28), 0 10px 30px rgba(40, 8, 6, 0.22);
-  --shadow-glow: 0 0 0 1px var(--accent-glow), 0 10px 36px rgba(255, 106, 77, 0.20);
+  /* Flat elevation. A drawn border reads sharper than a soft shadow. */
+  --shadow-card: none;
+  --shadow-glow: 0 0 0 1px var(--border-strong);
 
-  /* Fonts (the --font-display serif was unused and is gone) */
-  --font-grotesk: 'Space Grotesk', 'Inter', sans-serif;
-  --font-mono:    'JetBrains Mono', 'SF Mono', monospace;
+  /* Editorial/terminal geometry: near-square corners, not pill-soft.
+     Landing has no rounded cards at all. */
+  --r-sm: 3px; --r-md: 4px; --r-lg: 6px; --r-xl: 8px;
+
+  --font-grotesk: 'Space Grotesk', 'Inter', system-ui, sans-serif;
+  --font-mono:    'JetBrains Mono', 'SF Mono', ui-monospace, monospace;
 }
 
-/* The gradient is scoped to .app-shell, NOT body. body.v2's background is
-   shared with the Landing page, which is a separate unfinished design and
-   must keep its own look. */
-.app-shell {
-  background:
-    /* soft white bloom low-centre, the "to white" part of the wash */
-    radial-gradient(120% 55% at 50% 108%, rgba(255, 248, 244, 0.30), transparent 60%),
-    linear-gradient(180deg,
-      var(--ombre-1) 0%,
-      var(--ombre-2) 28%,
-      var(--ombre-3) 60%,
-      var(--ombre-4) 84%,
-      var(--ombre-5) 100%);
-}
-
-/* Landing keeps the original dark treatment. */
-body.v2 {
-  background:
-    radial-gradient(1000px 600px at 12% -8%, rgba(232,177,92,0.06), transparent 55%),
-    radial-gradient(900px 600px at 100% 5%, rgba(124,92,255,0.07), transparent 55%),
-    #08090C;
-  background-attachment: fixed;
+/* Flat ground. The ombre gradient is gone. */
+.app-shell { background: var(--bg-base); }
+body, body.v2 {
+  background: var(--bg-base);
+  background-image: none;
+  font-family: var(--font-grotesk);
 }
 
 /* Mono numbers everywhere .tabular is used */
-body.v2 .tabular { font-family: var(--font-mono); letter-spacing: -0.02em; }
+body.v2 .tabular { font-family: var(--font-mono); letter-spacing: -0.01em; }
 
-/* ---- Glass cards ----
-   Default for .card rather than an opt-in class.
-
-   Three layers, in paint order: a white lift that catches the light like a
-   real pane, then the depth tint that carries text contrast, over the blurred
-   backdrop. The inset highlight is the specular top edge that sells it as
-   glass; without it the card reads as a flat panel no matter how light the
-   tint is. */
+/* ---- Cards: flat panels with a hairline, no glass ---- */
 .card {
-  background:
-    linear-gradient(180deg, rgba(255, 242, 238, 0.12), rgba(255, 242, 238, 0.03) 55%, rgba(255, 242, 238, 0.05)),
-    var(--glass-hi);
-  backdrop-filter: blur(var(--glass-blur)) saturate(150%);
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(150%);
-  border: 1px solid var(--glass-border);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 246, 242, 0.22),
-    inset 0 -1px 0 rgba(80, 24, 18, 0.18),
-    var(--shadow-card);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
 }
-
-/* Only the depth tint changes by row; the lift and highlight stay constant so
-   every card reads as the same material. */
-.area-risk > .card,
-.area-fan > .card,
-.area-sidechart > .card {
-  background:
-    linear-gradient(180deg, rgba(255, 242, 238, 0.12), rgba(255, 242, 238, 0.03) 55%, rgba(255, 242, 238, 0.05)),
-    var(--glass-mid);
-}
-.area-money > .card,
-.area-widechart > .card {
-  background:
-    linear-gradient(180deg, rgba(255, 242, 238, 0.12), rgba(255, 242, 238, 0.03) 55%, rgba(255, 242, 238, 0.05)),
-    var(--glass-lo);
-}
-
-/* Hero: same material, coral edge. */
 .card--glow {
-  border: 1px solid var(--accent-glow);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 246, 242, 0.24),
-    var(--shadow-glow);
+  background: var(--bg-card);
+  border: 1px solid var(--border-strong);
+  box-shadow: none;
 }
 
-/* The sidebar floats on the same wash. Its icons are unchanged. */
+/* ---- Small labels go mono, uppercase, wide-tracked — the Landing's
+        marginalia treatment, which is most of the terminal feel ---- */
+.statcard-label,
+.hero-label,
+.section-note,
+.topbar-label,
+.fan-ro-year,
+.fan-ro-label,
+.ret-hero-note,
+.replay-recovery,
+.heat-collabel,
+.heat-rowlabel {
+  font-family: var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* Section titles stay in the display face, tightened like the Landing's. */
+.section-title { font-family: var(--font-grotesk); letter-spacing: -0.01em; }
+
+/* The sidebar is a rail with a hairline, matching Landing's topbar rule. */
 .sidebar {
-  background: rgba(34, 9, 7, 0.42);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
-  border-right: 1px solid var(--glass-border);
+  background: var(--bg-base);
+  border-right: 1px solid var(--border);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
-/* Scrollbars on a warm ground */
-::-webkit-scrollbar-thumb { background: rgba(255, 236, 230, 0.22); }
-::-webkit-scrollbar-thumb:hover { background: rgba(255, 236, 230, 0.34); }
-
-/* Count-up + reveal helpers */
-@keyframes revealUp {
-  from { opacity: 0; transform: translateY(24px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-.reveal { opacity: 0; }
-.reveal.is-visible { animation: revealUp 700ms cubic-bezier(0.16,1,0.3,1) forwards; }
+/* Scrollbars in bone */
+::-webkit-scrollbar-thumb { background: rgba(236, 231, 219, 0.18); }
+::-webkit-scrollbar-thumb:hover { background: rgba(236, 231, 219, 0.30); }

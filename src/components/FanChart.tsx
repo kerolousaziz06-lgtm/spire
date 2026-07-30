@@ -132,7 +132,7 @@ export function FanChart({ result }: Props) {
             <line x1={xAt(readYear)} x2={xAt(readYear)} y1={PAD_T} y2={H - PAD_B}
               stroke="var(--accent-bright)" strokeWidth="1" opacity="0.4" />
             <circle cx={xAt(readYear)} cy={yAt(readBand.p50)} r="4"
-              fill="#fff" stroke="var(--accent-bright)" strokeWidth="2" />
+              fill="var(--accent-bright)" stroke="var(--bg-base)" strokeWidth="2" />
           </>
         )}
 

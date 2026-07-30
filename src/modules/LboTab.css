@@ -5,13 +5,13 @@
 .lbo-label { font-size: var(--fs-xs); letter-spacing: 0.08em; color: var(--text-muted); }
 .lbo-irr { font-size: var(--fs-3xl); font-weight: 800; line-height: 1.1; }
 .lbo-irr--good { color: var(--gain); }
-.lbo-irr--ok { color: #D4A94C; }
+.lbo-irr--ok { color: var(--warn); }
 .lbo-irr--bad { color: var(--loss); }
 .lbo-irr.is-fresh { animation: lboPulse 600ms ease-out; }
 @keyframes lboPulse { 0%{ text-shadow: 0 0 0 rgba(96,165,250,0);} 30%{ text-shadow: 0 0 26px rgba(96,165,250,0.4);} 100%{ text-shadow: 0 0 0 rgba(96,165,250,0);} }
 .lbo-verdict { display: inline-block; font-size: var(--fs-sm); font-weight: 700; padding: 3px 12px; border-radius: 20px; margin-top: var(--s2); }
 .lbo-verdict--good { background: var(--gain-dim); color: var(--gain); }
-.lbo-verdict--ok { background: rgba(212,169,76,0.14); color: #D4A94C; }
+.lbo-verdict--ok { background: var(--warn-dim); color: var(--warn); }
 .lbo-verdict--bad { background: var(--loss-dim); color: var(--loss); }
 .lbo-hero-side { text-align: right; }
 .lbo-moic-label { font-size: var(--fs-xs); letter-spacing: 0.08em; color: var(--text-muted); }
@@ -27,9 +27,9 @@
 .lbo-slider-value { font-size: var(--fs-lg); font-weight: 700; color: var(--accent-bright); }
 .lbo-range { -webkit-appearance: none; appearance: none; width: 100%; height: 5px; border-radius: 5px; cursor: pointer;
   background: linear-gradient(to right, var(--accent) 0%, var(--accent) var(--fill), var(--bg-panel) var(--fill), var(--bg-panel) 100%); outline: none; }
-.lbo-range::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #fff; border: 3px solid var(--accent); box-shadow: 0 2px 6px rgba(0,0,0,0.4); transition: transform 120ms ease; }
+.lbo-range::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--accent); border: 2px solid var(--bg-base); box-shadow: 0 2px 6px rgba(0,0,0,0.4); transition: transform 120ms ease; }
 .lbo-range::-webkit-slider-thumb:hover { transform: scale(1.15); }
-.lbo-range::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: #fff; border: 3px solid var(--accent); cursor: pointer; }
+.lbo-range::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: var(--accent); border: 2px solid var(--bg-base); cursor: pointer; }
 .lbo-slider-hint { font-size: var(--fs-xs); color: var(--text-muted); }
 .lbo-entry-note { margin-top: var(--s5); padding-top: var(--s4); border-top: 1px solid var(--border); font-size: var(--fs-sm); color: var(--text-secondary); }
 .lbo-entry-note em { color: var(--text-muted); font-style: normal; font-size: var(--fs-xs); }
@@ -43,8 +43,8 @@
 .lbo-bridge-track { height: 22px; background: var(--bg-panel); border-radius: 6px; overflow: hidden; }
 .lbo-bridge-fill { height: 100%; border-radius: 6px; transition: width 400ms cubic-bezier(0.16,1,0.3,1); }
 .lbo-bridge-fill--a1 { background: linear-gradient(90deg, #3B82F6, #60A5FA); }
-.lbo-bridge-fill--a2 { background: linear-gradient(90deg, #34D399, #6EE7B7); }
-.lbo-bridge-fill--a3 { background: linear-gradient(90deg, #D4A94C, #E8C878); }
+.lbo-bridge-fill--a2 { background: linear-gradient(90deg, var(--gain), #BFD9A6); }
+.lbo-bridge-fill--a3 { background: linear-gradient(90deg, var(--warn), #E4CB94); }
 .lbo-bridge-val { font-size: var(--fs-sm); font-weight: 600; color: var(--text-primary); text-align: right; }
 .lbo-bridge-total { display: flex; justify-content: space-between; margin-top: var(--s4); padding-top: var(--s3); border-top: 1px solid var(--border); font-weight: 700; color: var(--text-primary); }
 

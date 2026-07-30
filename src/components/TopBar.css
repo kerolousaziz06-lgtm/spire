@@ -60,7 +60,7 @@
 .pill:hover { color: var(--text-primary); }
 .pill.is-active {
   background: var(--accent);
-  color: #fff;
-  box-shadow: 0 2px 8px rgba(59,130,246,0.35);
+  color: var(--bg-base);
+  box-shadow: none;
 }
 .pill:focus-visible { outline: 2px solid var(--accent-bright); outline-offset: 2px; }

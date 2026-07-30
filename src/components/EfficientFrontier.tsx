@@ -108,7 +108,7 @@ export function EfficientFrontier({ cloud, current }: Props) {
             <circle cx={xAt(current.risk)} cy={yAt(current.ret)} r="9"
               fill="var(--accent-glow)" opacity="0.5" className="ef-you-halo" />
             <circle cx={xAt(current.risk)} cy={yAt(current.ret)} r="5"
-              fill="#fff" stroke="var(--accent-bright)" strokeWidth="2.5" />
+              fill="var(--accent-bright)" stroke="var(--bg-base)" strokeWidth="2.5" />
             {hoverCurrent && (
               <text x={xAt(current.risk)} y={yAt(current.ret) - 14} className="ef-you-label" textAnchor="middle">
                 you

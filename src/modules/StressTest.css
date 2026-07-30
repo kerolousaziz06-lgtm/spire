@@ -227,7 +227,7 @@
   font-weight: 700;
   letter-spacing: -0.02em;
   margin: var(--s1) 0;
-  background: linear-gradient(180deg, #FFFFFF, #FFD5C4);
+  background: linear-gradient(180deg, #FFFDF7, #CFC7B6);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -357,14 +357,14 @@
 .hero-slider::-webkit-slider-thumb {
   -webkit-appearance: none; appearance: none;
   width: 14px; height: 14px; border-radius: 50%;
-  background: #fff; border: 3px solid var(--accent);
+  background: var(--accent); border: 2px solid var(--bg-base);
   box-shadow: 0 2px 6px rgba(0,0,0,0.4);
   transition: transform 120ms ease;
 }
 .hero-slider::-webkit-slider-thumb:hover { transform: scale(1.2); }
 .hero-slider::-moz-range-thumb {
   width: 14px; height: 14px; border-radius: 50%;
-  background: #fff; border: 3px solid var(--accent); cursor: pointer;
+  background: var(--accent); border: 2px solid var(--bg-base); cursor: pointer;
 }
 .hero-slider:focus-visible { outline: 2px solid var(--accent-bright); outline-offset: 3px; }
 
