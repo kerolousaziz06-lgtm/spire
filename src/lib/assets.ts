@@ -90,5 +90,136 @@ export function correlation(idA: string, idB: string): number {
   return CATEGORY_CORR[a.category]?.[b.category] ?? 0;
 }
 
+// ============================================================
+// Correlation MATRIX construction — and why it needs repairing.
+//
+// correlation() above answers one pair at a time from hand-picked
+// numbers: a category default, overridden where we know a specific pair
+// better. Each value is reasonable on its own. A SET of independently
+// chosen pairwise correlations, though, is not guaranteed to describe a
+// world that can actually exist.
+//
+// A valid correlation matrix must be positive semi-definite. Informally:
+// the correlations have to be mutually consistent. If A and B both move
+// with C, then A and B cannot be strongly opposed to each other. Ours
+// break that. Measured on this asset universe, the smallest eigenvalue
+// turns negative once a portfolio holds 8 of them, reaching -0.32 for all
+// 13. The strongest offending direction weights us_stocks +0.69 against
+// hy_bonds -0.51 and nasdaq -0.28: us_stocks|hy_bonds is pinned at 0.55
+// by an override while nasdaq|hy_bonds falls back to the stock/bond
+// category default of -0.05, and no real market can do both.
+//
+// Everything downstream then breaks. Cholesky cannot decompose such a
+// matrix, and portfolio variance can come out negative.
+//
+// So repair it to the nearest valid matrix before anyone uses it, using
+// the spectral form of Higham's nearest-correlation-matrix method: take
+// the eigendecomposition, lift any eigenvalue below a small floor up to
+// it, rebuild, then rescale so the diagonal is exactly 1 again.
+// ============================================================
+
+// Floor for repaired eigenvalues. Not 0 and not 1e-12: Cholesky divides
+// by the square root of these, so a near-zero floor produces a
+// catastrophically ill-conditioned decomposition. Valid sub-matrices in
+// this universe bottom out near 0.10, so 0.01 leaves conditioning intact
+// while barely moving the matrix.
+const MIN_EIGENVALUE = 0.01;
+
+// Cyclic Jacobi eigensolver for symmetric matrices. Returns the
+// eigenvalues and a matrix whose COLUMN i is the eigenvector for
+// values[i]. Small, dependency-free, and exact enough for 13x13.
+function jacobiEigen(input: number[][]): { values: number[]; vectors: number[][] } {
+  const n = input.length;
+  const a = input.map((row) => row.slice());
+  const v: number[][] = Array.from({ length: n }, (_, i) =>
+    Array.from({ length: n }, (_, j) => (i === j ? 1 : 0))
+  );
+
+  for (let sweep = 0; sweep < 100; sweep++) {
+    let off = 0;
+    for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) off += a[i][j] * a[i][j];
+    if (off < 1e-20) break;
+
+    for (let p = 0; p < n; p++) {
+      for (let q = p + 1; q < n; q++) {
+        if (Math.abs(a[p][q]) < 1e-20) continue;
+        const theta = (a[q][q] - a[p][p]) / (2 * a[p][q]);
+        const t = Math.sign(theta || 1) / (Math.abs(theta) + Math.sqrt(theta * theta + 1));
+        const c = 1 / Math.sqrt(t * t + 1);
+        const s = t * c;
+        for (let k = 0; k < n; k++) {
+          const akp = a[k][p], akq = a[k][q];
+          a[k][p] = c * akp - s * akq;
+          a[k][q] = s * akp + c * akq;
+        }
+        for (let k = 0; k < n; k++) {
+          const apk = a[p][k], aqk = a[q][k];
+          a[p][k] = c * apk - s * aqk;
+          a[q][k] = s * apk + c * aqk;
+        }
+        for (let k = 0; k < n; k++) {
+          const vkp = v[k][p], vkq = v[k][q];
+          v[k][p] = c * vkp - s * vkq;
+          v[k][q] = s * vkp + c * vkq;
+        }
+      }
+    }
+  }
+  return { values: a.map((row, i) => row[i]), vectors: v };
+}
+
+// Project a symmetric matrix onto the nearest valid correlation matrix.
+// Returns the input untouched when it is already valid, so portfolios
+// that were always fine keep their exact previous numbers.
+export function nearestValidCorrelation(raw: number[][]): number[][] {
+  const n = raw.length;
+  if (n < 2) return raw.map((r) => r.slice());
+
+  const { values, vectors } = jacobiEigen(raw);
+  if (Math.min(...values) >= MIN_EIGENVALUE) return raw.map((r) => r.slice());
+
+  const lifted = values.map((x) => Math.max(x, MIN_EIGENVALUE));
+
+  // Rebuild: C' = V diag(lifted) V^T
+  const out: number[][] = Array.from({ length: n }, () => new Array(n).fill(0));
+  for (let i = 0; i < n; i++) {
+    for (let j = i; j < n; j++) {
+      let s = 0;
+      for (let k = 0; k < n; k++) s += vectors[i][k] * lifted[k] * vectors[j][k];
+      out[i][j] = s;
+      out[j][i] = s;
+    }
+  }
+
+  // Rescale to unit diagonal. This is a congruence transform by a
+  // positive diagonal, so it preserves positive definiteness.
+  const d = out.map((row, i) => Math.sqrt(row[i]));
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) out[i][j] /= d[i] * d[j];
+    out[i][i] = 1;
+  }
+  return out;
+}
+
+// Memoised because computeFrontier asks for the same matrix 800 times per
+// render. Keyed on the ids in order, since a different order is a
+// different (permuted) matrix.
+const matrixCache = new Map<string, number[][]>();
+
+// The only correlation matrix anyone downstream should use. Guaranteed
+// positive definite.
+export function correlationMatrix(ids: string[]): number[][] {
+  const key = ids.join('|');
+  const hit = matrixCache.get(key);
+  if (hit) return hit;
+
+  const raw = ids.map((a) => ids.map((b) => (a === b ? 1 : correlation(a, b))));
+  const fixed = nearestValidCorrelation(raw);
+
+  if (matrixCache.size > 512) matrixCache.clear();
+  matrixCache.set(key, fixed);
+  return fixed;
+}
+
 // A portfolio holding: an asset id and the dollars held in it.
 export type Holding = { assetId: string; dollars: number };

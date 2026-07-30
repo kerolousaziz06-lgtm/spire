@@ -15,7 +15,7 @@
 // screen/UI involved. That makes them easy to test and reason about.
 // ============================================================
 
-import { ASSET_BY_ID, correlation, type Holding } from './assets';
+import { ASSET_BY_ID, correlationMatrix, type Holding } from './assets';
 export type { Holding };
 
 export type SimulationInput = {
@@ -115,6 +115,15 @@ function randFatTail(): number {
 // don't need to memorize the math — think of L as a "mixing recipe"
 // that blends independent randoms into correlated ones.
 // ------------------------------------------------------------------
+// Cholesky only exists for a positive-definite matrix. This used to clamp
+// a non-positive diagonal to 1e-12 with a comment about floating-point
+// noise, then divide by its square root on the very next line. That turned
+// an invalid correlation matrix into a silent 1e6 multiplier on the whole
+// mixing recipe: a 10-asset portfolio reported a $9.18 QUINTILLION best
+// case, and an 11-asset one reported NaN. A wrong number that still looks
+// plausible is worse than a crash, so this throws now.
+//
+// It should never fire: correlationMatrix() repairs the matrix first.
 function choleskyDecompose(matrix: number[][]): number[][] {
   const n = matrix.length;
   const L: number[][] = Array.from({ length: n }, () => new Array(n).fill(0));
@@ -123,20 +132,21 @@ function choleskyDecompose(matrix: number[][]): number[][] {
       let sum = 0;
       for (let k = 0; k < j; k++) sum += L[i][k] * L[j][k];
       if (i === j) {
-        // Guard against tiny negative from floating point -> sqrt NaN
-        L[i][j] = Math.sqrt(Math.max(matrix[i][i] - sum, 1e-12));
+        const d = matrix[i][i] - sum;
+        if (!(d > 0)) {
+          throw new Error(
+            `choleskyDecompose: matrix is not positive definite ` +
+            `(pivot ${i} = ${d}). Build correlation matrices with ` +
+            `correlationMatrix() from assets.ts, which repairs them first.`
+          );
+        }
+        L[i][j] = Math.sqrt(d);
       } else {
         L[i][j] = (matrix[i][j] - sum) / L[j][j];
       }
     }
   }
   return L;
-}
-
-// Build the correlation matrix for just the assets in this portfolio,
-// in the given order.
-function buildCorrMatrix(assetIds: string[]): number[][] {
-  return assetIds.map((a) => assetIds.map((b) => (a === b ? 1 : correlation(a, b))));
 }
 
 // Multiply the mixing matrix L by a vector of independent draws z,
@@ -226,7 +236,7 @@ export function runSimulation(input: SimulationInput): SimulationResult {
   }
 
   // Prepare the correlation mixing recipe ONCE (not per path — faster).
-  const corr = buildCorrMatrix(active.map((h) => h.assetId));
+  const corr = correlationMatrix(active.map((h) => h.assetId));
   const L = choleskyDecompose(corr);
 
   // Run all the paths. allPaths[i] is one future's yearly totals.

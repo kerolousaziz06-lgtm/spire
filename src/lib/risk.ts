@@ -10,7 +10,7 @@
 //
 // Each also gets a 0..1 "level" so the UI bars know how full to draw.
 // ============================================================
-import { ASSET_BY_ID, correlation, type Holding } from './assets';
+import { ASSET_BY_ID, correlationMatrix, type Holding } from './assets';
 
 const RISK_FREE = 0.02; // ~2% risk-free rate for the Sharpe ratio
 
@@ -43,13 +43,18 @@ export function computeRiskProfile(holdings: Holding[]): RiskProfile {
   // This is the formula that makes diversification real: when
   // correlation between two assets is low or negative, their combined
   // variance is LESS than the weighted average of the individual ones.
+  // Read the REPAIRED matrix, not correlation() pair by pair. With the raw
+  // pairwise values this sum could come out negative, and the Math.max
+  // below hid that as an understated volatility rather than an error.
+  const corrM = correlationMatrix(assets.map((a) => a.id));
   let variance = 0;
   for (let i = 0; i < assets.length; i++) {
     for (let j = 0; j < assets.length; j++) {
-      const corr = i === j ? 1 : correlation(assets[i].id, assets[j].id);
-      variance += weights[i] * weights[j] * assets[i].volatility * assets[j].volatility * corr;
+      variance += weights[i] * weights[j] * assets[i].volatility * assets[j].volatility * corrM[i][j];
     }
   }
+  // Belt and braces now that the matrix is valid: variance cannot be
+  // negative, so this only absorbs floating-point dust at zero.
   const volatility = Math.sqrt(Math.max(variance, 0));
 
   // Sharpe ratio = (return - risk-free) / volatility.
@@ -79,11 +84,14 @@ export type FrontierPoint = { risk: number; ret: number };
 function riskReturnForWeights(assetIds: string[], weights: number[]): FrontierPoint {
   const assets = assetIds.map((id) => ASSET_BY_ID[id]);
   const ret = assets.reduce((s, a, i) => s + weights[i] * a.expReturn, 0);
+  // Same repaired matrix as computeRiskProfile, so the frontier cloud and
+  // the risk panel cannot disagree. It is memoised, which matters here:
+  // computeFrontier calls this 800 times per render.
+  const corrM = correlationMatrix(assetIds);
   let variance = 0;
   for (let i = 0; i < assets.length; i++) {
     for (let j = 0; j < assets.length; j++) {
-      const corr = i === j ? 1 : correlation(assets[i].id, assets[j].id);
-      variance += weights[i] * weights[j] * assets[i].volatility * assets[j].volatility * corr;
+      variance += weights[i] * weights[j] * assets[i].volatility * assets[j].volatility * corrM[i][j];
     }
   }
   return { risk: Math.sqrt(Math.max(variance, 0)), ret };

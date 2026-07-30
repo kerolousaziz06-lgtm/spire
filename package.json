@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "verify:math": "esbuild scripts/verify-math.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/verify-math.mjs --log-level=error && node node_modules/.cache/verify-math.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",
@@ -17,6 +18,7 @@
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
+    "esbuild": "^0.21.5",
     "puppeteer-core": "^25.4.0",
     "typescript": "^5.5.3",
     "vite": "^5.4.0"
