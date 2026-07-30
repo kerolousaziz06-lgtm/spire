@@ -10,7 +10,7 @@
 // Hovering a cell explains it in plain language.
 // ============================================================
 import { useState } from 'react';
-import { ASSET_BY_ID, correlation, type Holding } from '../lib/assets';
+import { ASSET_BY_ID, correlationMatrix, type Holding } from '../lib/assets';
 import './CorrelationHeatmap.css';
 
 type Props = { holdings: Holding[] };
@@ -46,8 +46,15 @@ export function CorrelationHeatmap({ holdings }: Props) {
   }
 
   const n = assets.length;
+
+  // The REPAIRED matrix, the same one runSimulation and computeRiskProfile
+  // use. Reading raw correlation() here would print a number the engine is
+  // not simulating with: the repair shifts a pair by up to 0.165, so the
+  // grid would contradict the results it sits next to.
+  const corrM = correlationMatrix(assets.map((a) => a.id));
+
   const hoverInfo = hover
-    ? { a: assets[hover.i], b: assets[hover.j], r: correlation(assets[hover.i].id, assets[hover.j].id) }
+    ? { a: assets[hover.i], b: assets[hover.j], r: corrM[hover.i][hover.j] }
     : null;
 
   return (
@@ -66,7 +73,7 @@ export function CorrelationHeatmap({ holdings }: Props) {
               <span style={{ color: rowA.color }}>{rowA.short}</span>
             </div>
             {assets.map((colA, j) => {
-              const r = correlation(rowA.id, colA.id);
+              const r = corrM[i][j];
               const isHover = hover?.i === i && hover?.j === j;
               return (
                 <div
