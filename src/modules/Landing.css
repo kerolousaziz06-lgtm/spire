@@ -24,81 +24,88 @@
   letter-spacing: 0.14em; color: var(--light-soft);
 }
 
-/* ---- HERO ---- */
+/* ---- HERO ----
+   Sized to one viewport so the module buttons sit just below the fold,
+   and centred as a single column: wordmark, then the map with its rails,
+   then the caption and tagline. */
 .ed-hero {
   position: relative;
-  padding: var(--s6) var(--s6) var(--s7);
-  display: flex; flex-direction: column; align-items: center;
-}
-
-/* liquid glass flow behind the hero content */
-.ed-flow {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 0;
-  opacity: 0.9;
-}
-.ed-hero > *:not(.ed-flow) { position: relative; z-index: 1; }
-
-
-/* stage stacks the word over the framed map */
-.ed-stage {
-  position: relative;
-  z-index: 1;
-  width: min(56%, 490px);
+  min-height: calc(100vh - 48px);
+  /* horizontal padding matches .ed-topbar so the rail labels line up with
+     EST. 2026 and FINANCIAL ANALYSIS above them */
+  padding: var(--s5) var(--s6) var(--s6);
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
+  gap: var(--s4);
 }
+
+/* Wordmark. Full page width, so it centres on the page rather than on the
+   map — it is deliberately wider than the frame. */
+.ed-word {
+  font-family: var(--font-grotesk);
+  font-weight: 700;
+  font-size: clamp(72px, 18.6vw, 280px);
+  line-height: 0.86;
+  letter-spacing: -0.03em;
+  text-align: center;
+  width: 100%;
+  margin: 0;
+  color: var(--light);
+  /* letter-spacing appends a trailing space after the LAST glyph too, so the
+     inline box ends before the ink does and centring puts the ink half a
+     letter-space right of centre. Pull back by half, not the full amount —
+     the old rule used the full -0.03em and overshot. */
+  text-indent: -0.0075em;
+}
+
+/* The map row: rail | frame | rail. Both rails flex to fill the leftover
+   width, pushing their labels to the page edges, and stretch to the frame's
+   height so space-between lands them on its top, middle and bottom. */
+.ed-hero-mid {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  gap: var(--s5);
+  width: 100%;
+}
+
+.ed-rail {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.ed-rail--r { align-items: flex-end; }
 
 /* square frame holding the map + lens */
 .ed-frame {
   position: relative;
-  z-index: 1;
-  width: 100%;
+  flex: 0 0 auto;
+  width: min(440px, 34vw);
 }
 
-/* giant condensed wordmark above the map (cutout removed for now) */
-.ed-word {
-  z-index: 2;
-  font-family: var(--font-grotesk);
-  font-weight: 700;
-  font-size: clamp(72px, 15vw, 240px);
-  line-height: 0.9;
-  letter-spacing: -0.03em;
-  text-align: center;
-  width: 100%;
-  margin: 0 0 var(--s3);
-  color: var(--light);
-  /* trailing letter-spacing adds phantom space on the right; a small
-     left indent equal to it re-centers the glyphs within the box */
-  text-indent: -0.03em;
-}
 .ed-frame-caption {
   display: flex; justify-content: center; gap: var(--s2);
-  margin-top: var(--s3);
   font-family: var(--font-mono); font-size: 11px;
   letter-spacing: 0.1em; color: var(--light-soft);
 }
 
 /* marginalia */
 .ed-margin {
-  position: absolute;
   font-family: var(--font-mono); font-size: 12px;
   letter-spacing: 0.16em; color: var(--light-faint);
-  text-transform: uppercase; z-index: 2; pointer-events: none;
+  text-transform: uppercase; pointer-events: none;
+  white-space: nowrap;
 }
-.ed-margin--l  { left: var(--s5); top: 52%; writing-mode: vertical-rl; transform: rotate(180deg); }
-.ed-margin--r  { right: var(--s5); top: 50%; writing-mode: vertical-rl; }
-.ed-margin--tl { left: var(--s6); top: 30%; }
-.ed-margin--tr { right: var(--s6); top: 30%; }
-.ed-margin--bl { left: var(--s6); bottom: 14%; }
-.ed-margin--br { right: var(--s6); bottom: 14%; }
+/* vertical labels: left reads bottom-to-top, right reads top-to-bottom */
+.ed-margin--up   { writing-mode: vertical-rl; transform: rotate(180deg); }
+.ed-margin--down { writing-mode: vertical-rl; }
 
 .ed-tagline {
-  margin-top: var(--s5);
   font-family: var(--font-grotesk); font-size: var(--fs-base);
   color: var(--light-soft); letter-spacing: 0.02em;
 }
@@ -139,8 +146,9 @@
 
 @media (max-width: 720px) {
   .ed-word { font-size: clamp(56px, 19vw, 110px); }
-  .ed-frame { width: 76%; }
+  .ed-frame { width: 76vw; }
   .ed-modules { grid-template-columns: 1fr; }
   .ed-module { border-right: none; border-bottom: 1px solid rgba(236,231,219,0.18); }
-  .ed-margin--l, .ed-margin--r { display: none; }
+  /* No room for the rails beside the frame on a phone */
+  .ed-rail { display: none; }
 }

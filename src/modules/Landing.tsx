@@ -21,26 +21,36 @@ export function Landing({ onEnter, suiteName = 'SUITE' }: Props) {
       </div>
 
       <section className="ed-hero">
-        {/* marginalia */}
-        <span className="ed-margin ed-margin--l">TRADE</span>
-        <span className="ed-margin ed-margin--r">RISK</span>
-        <span className="ed-margin ed-margin--tl">40.7069° N</span>
-        <span className="ed-margin ed-margin--tr">74.0113° W</span>
-        <span className="ed-margin ed-margin--bl">VALUATION</span>
-        <span className="ed-margin ed-margin--br">NYSE</span>
+        {/* Full-width so the wordmark centres on the page, not on the map */}
+        <h1 className="ed-word">{suiteName}</h1>
 
-        {/* word + framed map, overlapped; the word has a circular
-            cutout where the lens sits, so the lens "eats" the letters */}
-        <div className="ed-stage">
-          <h1 className="ed-word">{suiteName}</h1>
+        {/* The map flanked by two marginalia rails. The rails are flex
+            siblings of the frame and stretch to its height, which is what
+            pins each label to the frame's top, middle and bottom edge.
+            They were absolutely positioned before, against percentages of
+            the hero that drifted whenever the hero's height changed. */}
+        <div className="ed-hero-mid">
+          <div className="ed-rail ed-rail--l">
+            <span className="ed-margin">40.7069° N</span>
+            <span className="ed-margin ed-margin--up">TRADE</span>
+            <span className="ed-margin">VALUATION</span>
+          </div>
+
           <div className="ed-frame">
             <WallStreetMap />
-            <div className="ed-frame-caption">
-              <span>WALL STREET</span>
-              <span>—</span>
-              <span>DOWNTOWN MANHATTAN</span>
-            </div>
           </div>
+
+          <div className="ed-rail ed-rail--r">
+            <span className="ed-margin">74.0113° W</span>
+            <span className="ed-margin ed-margin--down">RISK</span>
+            <span className="ed-margin">NYSE</span>
+          </div>
+        </div>
+
+        <div className="ed-frame-caption">
+          <span>WALL STREET</span>
+          <span>—</span>
+          <span>DOWNTOWN MANHATTAN</span>
         </div>
 
         <p className="ed-tagline">Portfolio risk &amp; company valuation.</p>
