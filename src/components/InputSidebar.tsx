@@ -7,7 +7,7 @@
 // give the analysis room. One shared input feeds every tab.
 // ============================================================
 import { useState } from 'react';
-import type { CompanyInput } from '../lib/analysis';
+import { FIELD_HINTS, FIELD_LABELS, OPTIONAL_FIELDS, type CompanyInput, type CompanyField } from '../lib/analysis';
 import './InputSidebar.css';
 
 type Props = {
@@ -23,52 +23,40 @@ type Props = {
 
 // Field groups mirror the real financial statements, so filling this
 // in feels like reading down a 10-K.
-const GROUPS: { title: string; fields: { key: keyof CompanyInput; label: string }[] }[] = [
+// Field groups mirror the real financial statements, so filling this
+// in feels like reading down a 10-K. Labels and hints live in
+// analysis.ts so the sidebar and the "missing data" notices agree.
+const GROUPS: { title: string; fields: CompanyField[] }[] = [
   {
     title: 'Income Statement',
-    fields: [
-      { key: 'revenue', label: 'Revenue' },
-      { key: 'grossProfit', label: 'Gross profit' },
-      { key: 'operatingIncome', label: 'Operating income' },
-      { key: 'netIncome', label: 'Net income' },
-      { key: 'interestExpense', label: 'Interest expense' },
-    ],
+    fields: ['revenue', 'grossProfit', 'operatingIncome', 'netIncome', 'interestExpense'],
   },
   {
     title: 'Balance Sheet',
-    fields: [
-      { key: 'totalAssets', label: 'Total assets' },
-      { key: 'currentAssets', label: 'Current assets' },
-      { key: 'inventory', label: 'Inventory' },
-      { key: 'cash', label: 'Cash & equivalents' },
-      { key: 'totalLiabilities', label: 'Total liabilities' },
-      { key: 'currentLiabilities', label: 'Current liabilities' },
-      { key: 'totalDebt', label: 'Total debt' },
-      { key: 'shareholdersEquity', label: "Shareholders' equity" },
-    ],
+    fields: ['totalAssets', 'currentAssets', 'inventory', 'cash',
+             'totalLiabilities', 'currentLiabilities', 'totalDebt', 'shareholdersEquity'],
   },
   {
     title: 'Cash Flow',
-    fields: [
-      { key: 'operatingCashFlow', label: 'Operating cash flow' },
-      { key: 'capex', label: 'Capital expenditures' },
-    ],
+    fields: ['operatingCashFlow', 'capex'],
   },
   {
     title: 'Market',
-    fields: [
-      { key: 'sharesOutstanding', label: 'Shares outstanding' },
-      { key: 'sharePrice', label: 'Share price' },
-    ],
+    fields: ['sharesOutstanding', 'sharePrice'],
   },
 ];
 
 export function InputSidebar({ input, onChange, onReset, collapsed, onToggle }: Props) {
   const [group, setGroup] = useState(0); // which statement group is open
 
-  function setField(key: keyof CompanyInput, raw: string) {
-    const n = parseFloat(raw);
-    onChange({ ...input, [key]: isFinite(n) ? n : 0 });
+  // A cleared field becomes null, NOT 0. Coercing to 0 used to make
+  // "I haven't found this yet" indistinguishable from "this is genuinely
+  // zero", and every metric downstream was computed from the 0.
+  function setField(key: CompanyField, raw: string) {
+    const trimmed = raw.trim();
+    if (trimmed === '') { onChange({ ...input, [key]: null }); return; }
+    const n = parseFloat(trimmed);
+    onChange({ ...input, [key]: Number.isFinite(n) ? n : null });
   }
 
   if (collapsed) {
@@ -107,18 +95,30 @@ export function InputSidebar({ input, onChange, onReset, collapsed, onToggle }: 
 
       <div className="isb-fields">
         <div className="isb-group-title">{GROUPS[group].title}</div>
-        {GROUPS[group].fields.map(({ key, label }) => (
-          <label className="isb-field" key={key}>
-            <span className="isb-label">{label}</span>
-            <input
-              className="isb-input tabular"
-              type="number"
-              value={input[key]}
-              onChange={(e) => setField(key, e.target.value)}
-              step="any"
-            />
-          </label>
-        ))}
+        {GROUPS[group].fields.map((key) => {
+          const optional = OPTIONAL_FIELDS.has(key);
+          const blank = input[key] === null;
+          return (
+            <label className="isb-field" key={key}>
+              <span className="isb-label">
+                {FIELD_LABELS[key]}
+                {optional && <span className="isb-optional">optional</span>}
+              </span>
+              <input
+                className={`isb-input tabular ${blank && !optional ? 'is-blank' : ''}`}
+                type="number"
+                value={input[key] ?? ''}
+                onChange={(e) => setField(key, e.target.value)}
+                step="any"
+                placeholder={optional ? '\u2014' : 'required'}
+                aria-describedby={`hint-${key}`}
+              />
+              {/* Where to find it on a filing. Several of these are not
+                  single line items, which was the slowest part of entry. */}
+              <span className="isb-hint" id={`hint-${key}`}>{FIELD_HINTS[key]}</span>
+            </label>
+          );
+        })}
       </div>
 
       <div className="isb-foot">

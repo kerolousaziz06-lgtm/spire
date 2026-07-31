@@ -8,6 +8,8 @@
 // ============================================================
 import { useMemo } from 'react';
 import type { CompanyInput, Metric, Health } from '../lib/analysis';
+import { missingFields } from '../lib/analysis';
+import { MissingData } from '../components/MissingData';
 import { profitability, liquidity, leverage, efficiency, dupont } from '../lib/analysis';
 import { Card } from '../components/Card';
 import { MetricRow } from '../components/MetricRow';
@@ -59,19 +61,29 @@ export function HealthTab({ input }: { input: CompanyInput }) {
           Return on equity alone hides <em>how</em> a company earns its returns. DuPont splits it into three drivers, so you can see whether ROE comes from fat margins, efficient asset use, or simply a lot of debt.
         </p>
 
-        <div className="dupont-flow">
-          <DuPontFactor label="Net margin" value={(dp.netMargin * 100).toFixed(1) + '%'} sub="profit per sales dollar" />
-          <span className="dupont-op">{"\u00D7"}</span>
-          <DuPontFactor label="Asset turnover" value={dp.assetTurnover.toFixed(2) + '\u00D7'} sub="sales per asset dollar" />
-          <span className="dupont-op">{"\u00D7"}</span>
-          <DuPontFactor label="Equity multiplier" value={dp.equityMultiplier.toFixed(2) + '\u00D7'} sub="leverage (assets/equity)" />
-          <span className="dupont-op">=</span>
-          <DuPontFactor label="ROE" value={(dp.roe * 100).toFixed(1) + '%'} sub="return on equity" highlight />
-        </div>
+        {dp === null ? (
+          <MissingData
+            what="the DuPont breakdown"
+            fields={missingFields(input, ['netIncome', 'revenue', 'totalAssets', 'shareholdersEquity'])}
+          />
+        ) : (
+          <>
 
-        <div className={`dupont-driver dupont-driver--${dp.equityMultiplier >= 3 ? 'warn' : 'good'}`}>
-          {dp.driver}
-        </div>
+          <div className="dupont-flow">
+            <DuPontFactor label="Net margin" value={(dp.netMargin * 100).toFixed(1) + '%'} sub="profit per sales dollar" />
+            <span className="dupont-op">{"\u00D7"}</span>
+            <DuPontFactor label="Asset turnover" value={dp.assetTurnover.toFixed(2) + '\u00D7'} sub="sales per asset dollar" />
+            <span className="dupont-op">{"\u00D7"}</span>
+            <DuPontFactor label="Equity multiplier" value={dp.equityMultiplier.toFixed(2) + '\u00D7'} sub="leverage (assets/equity)" />
+            <span className="dupont-op">=</span>
+            <DuPontFactor label="ROE" value={(dp.roe * 100).toFixed(1) + '%'} sub="return on equity" highlight />
+          </div>
+
+          <div className={`dupont-driver dupont-driver--${dp.equityMultiplier >= 3 ? 'warn' : 'good'}`}>
+            {dp.driver}
+          </div>
+          </>
+        )}
       </Card>
     </div>
   );

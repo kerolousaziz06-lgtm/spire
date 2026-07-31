@@ -122,6 +122,7 @@ console.log(`  diversified       ${pct(r2.troughDrop)}   (CLAUDE.md: -23%)`);
 console.log(`  deterministic     ${r1.troughDrop === r1b.troughDrop ? 'PASS (identical on repeat)' : 'FAIL'}`);
 
 const dp = dupont(SAMPLE_INPUT);
+if (!dp) throw new Error('dupont returned null for the complete SAMPLE_INPUT');
 const dpProduct = dp.netMargin * dp.assetTurnover * dp.equityMultiplier;
 console.log(`\nDuPont              margin*turnover*leverage = ${f(dpProduct, 8)}  vs reported ROE ${f(dp.roeReported, 8)}  -> ${Math.abs(dpProduct - dp.roeReported) < 1e-9 ? 'PASS' : 'FAIL'}`);
 

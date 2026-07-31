@@ -7,14 +7,22 @@
 // from the company's operating income (a common EBITDA proxy).
 // ============================================================
 import { useMemo, useState, useEffect } from 'react';
-import type { CompanyInput } from '../lib/analysis';
+import { missingFields, type CompanyInput, type CompanyField } from '../lib/analysis';
+import { MissingData } from '../components/MissingData';
 import { runLbo, type LboInput } from '../lib/lbo';
 import { Card } from '../components/Card';
 import './LboTab.css';
 
+// The whole model is driven off an EBITDA proxy, so without operating
+// income there is nothing to build on.
+const LBO_REQUIRES: readonly CompanyField[] = ['operatingIncome'];
+
 export function LboTab({ input }: { input: CompanyInput }) {
+  const missing = missingFields(input, LBO_REQUIRES);
   // EBITDA proxy: operating income + a rough D&A add-back (~15%).
-  const baseEbitda = Math.max(1, input.operatingIncome * 1.15);
+  // Falls back to a placeholder only to keep hooks unconditional; when
+  // `missing` is non-empty nothing computed from it is rendered.
+  const baseEbitda = Math.max(1, (input.operatingIncome ?? 0) * 1.15);
 
   const [entryMultiple, setEntryMultiple] = useState(8);
   const [exitMultiple, setExitMultiple] = useState(8);
@@ -47,6 +55,14 @@ export function LboTab({ input }: { input: CompanyInput }) {
     { label: 'Multiple change', val: r.attribution.multipleChange, cls: 'a3' },
   ];
   const maxPart = Math.max(...parts.map((p) => Math.abs(p.val)), 1);
+
+  if (missing.length > 0) {
+    return (
+      <div className="lbo">
+        <MissingData what="the LBO model" fields={missing} />
+      </div>
+    );
+  }
 
   return (
     <div className="lbo">

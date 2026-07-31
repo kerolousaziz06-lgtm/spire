@@ -109,3 +109,38 @@
 }
 .isb-reset:hover { color: var(--text-primary); border-color: var(--border-strong); }
 .isb-reset:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ---- Field hints & optional markers ----
+   Several figures are not single line items on a filing (total debt has
+   to be assembled, interest expense hides in the notes), and hunting for
+   them was the slowest part of entering a company. */
+.isb-hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 10.5px;
+  line-height: 1.45;
+  color: var(--text-muted);
+  max-width: 34ch;
+}
+.isb-optional {
+  margin-left: var(--s2);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 1px 5px;
+  vertical-align: middle;
+}
+/* A required field left blank: marked, but never blocking. */
+.isb-input.is-blank { border-color: var(--warn); }
+.isb-input::placeholder {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  opacity: 0.7;
+}

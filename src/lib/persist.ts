@@ -107,7 +107,7 @@ export function clearPersisted(key: string): void {
  * filled from the sample rather than arriving as `undefined`, which is a
  * second line of defence behind the version bump.
  */
-export function reviveNumericRecord<T extends Record<string, number>>(
+export function reviveNumericRecord<T extends Record<string, number | null>>(
   raw: unknown,
   fallback: T
 ): T | null {
@@ -116,8 +116,11 @@ export function reviveNumericRecord<T extends Record<string, number>>(
   const out = { ...fallback };
   for (const key of Object.keys(fallback) as (keyof T)[]) {
     const v = src[key as string];
-    if (typeof v === 'number' && Number.isFinite(v)) out[key] = v as T[keyof T];
-    // else: keep the fallback's value for this key
+    // null is a real stored value here: the user deliberately cleared the
+    // field. Anything that is neither null nor a finite number (undefined
+    // from an older payload, a string, NaN) keeps the fallback.
+    if (v === null) out[key] = null as T[keyof T];
+    else if (typeof v === 'number' && Number.isFinite(v)) out[key] = v as T[keyof T];
   }
   return out;
 }

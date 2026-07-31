@@ -13,28 +13,97 @@
 // ---- The raw inputs the user provides (from the statements) ----
 // All in the same currency unit (e.g. millions). We keep the set
 // small and standard — the figures anyone can read off a 10-K.
+// A figure the user has not supplied is `null`, NOT 0. The distinction
+// matters: a software company genuinely has 0 inventory, while a user who
+// has not found the number yet has none. Treating those the same is how a
+// tool ends up rating an empty form.
 export type CompanyInput = {
   // Income statement
-  revenue: number;
-  grossProfit: number;
-  operatingIncome: number;
-  netIncome: number;
-  interestExpense: number;
+  revenue: number | null;
+  grossProfit: number | null;
+  operatingIncome: number | null;
+  netIncome: number | null;
+  interestExpense: number | null;
   // Balance sheet
-  totalAssets: number;
-  currentAssets: number;
-  inventory: number;
-  cash: number;
-  totalLiabilities: number;
-  currentLiabilities: number;
-  totalDebt: number;          // interest-bearing debt
-  shareholdersEquity: number;
+  totalAssets: number | null;
+  currentAssets: number | null;
+  inventory: number | null;
+  cash: number | null;
+  totalLiabilities: number | null;
+  currentLiabilities: number | null;
+  totalDebt: number | null;          // interest-bearing debt
+  shareholdersEquity: number | null;
   // Cash flow
-  operatingCashFlow: number;
-  capex: number;              // capital expenditures (a positive number)
-  // Market (optional, for valuation context)
-  sharesOutstanding: number;
-  sharePrice: number;
+  operatingCashFlow: number | null;
+  capex: number | null;              // capital expenditures (a positive number)
+  // Market
+  sharesOutstanding: number | null;
+  sharePrice: number | null;
+};
+
+export type CompanyField = keyof CompanyInput;
+
+// Fields that may legitimately be blank. Everything else is required, and
+// any metric depending on a blank required field is SKIPPED rather than
+// computed from a stand-in value.
+export const OPTIONAL_FIELDS: ReadonlySet<CompanyField> = new Set<CompanyField>([
+  'interestExpense',   // often only in the notes; a debt-free firm has none
+  'inventory',         // absent for software and service businesses
+  'totalDebt',         // must be assembled; a debt-free firm has none
+  'sharesOutstanding', // only needed for per-share valuation
+  'sharePrice',        // only needed to compare against the market
+]);
+
+// Display names, shared by the input sidebar and the "missing data"
+// notices, so a field is called the same thing in both places.
+export const FIELD_LABELS: Record<CompanyField, string> = {
+  revenue: 'Revenue',
+  grossProfit: 'Gross profit',
+  operatingIncome: 'Operating income',
+  netIncome: 'Net income',
+  interestExpense: 'Interest expense',
+  totalAssets: 'Total assets',
+  currentAssets: 'Current assets',
+  inventory: 'Inventory',
+  cash: 'Cash & equivalents',
+  totalLiabilities: 'Total liabilities',
+  currentLiabilities: 'Current liabilities',
+  totalDebt: 'Total debt',
+  shareholdersEquity: "Shareholders' equity",
+  operatingCashFlow: 'Operating cash flow',
+  capex: 'Capital expenditures',
+  sharesOutstanding: 'Shares outstanding',
+  sharePrice: 'Share price',
+};
+
+// Which of `keys` the user has not supplied. Callers use this to skip a
+// whole analysis and say precisely what is needed, instead of computing
+// something from stand-in values.
+export function missingFields(c: CompanyInput, keys: readonly CompanyField[]): CompanyField[] {
+  return keys.filter((k) => c[k] === null || !Number.isFinite(c[k] as number));
+}
+
+// Where to find each figure. Shown under the field, because several of
+// these are not single line items and hunting for them was the slowest
+// part of entering a company.
+export const FIELD_HINTS: Record<CompanyField, string> = {
+  revenue: 'Income statement, top line. Also called "net sales" or "total revenue".',
+  grossProfit: 'Revenue minus cost of goods sold. If not shown, subtract COGS from revenue.',
+  operatingIncome: 'Income statement, after operating expenses. Also called EBIT or "operating profit".',
+  netIncome: 'Income statement, bottom line, after tax and interest.',
+  interestExpense: 'Often in the notes rather than on the face of the income statement. Look for "interest expense, net". Enter 0 if the company has no debt.',
+  totalAssets: 'Balance sheet, the total of the asset section.',
+  currentAssets: 'Balance sheet, the "total current assets" subtotal (due within a year).',
+  inventory: 'Balance sheet, within current assets. Enter 0 for software and service companies, which carry none.',
+  cash: 'Balance sheet, "cash and cash equivalents". Include short-term investments if broken out.',
+  totalLiabilities: 'Balance sheet, total of the liabilities section. Equals total assets minus equity.',
+  currentLiabilities: 'Balance sheet, the "total current liabilities" subtotal (due within a year).',
+  totalDebt: 'Usually must be assembled: short-term borrowings + current portion of long-term debt + long-term debt. Excludes payables and leases. Enter 0 if debt-free.',
+  shareholdersEquity: 'Balance sheet, "total stockholders\' equity". Exclude minority interest if shown separately.',
+  operatingCashFlow: 'Cash flow statement, "net cash provided by operating activities".',
+  capex: 'Cash flow statement, investing section: "purchases of property, plant and equipment". Enter as a positive number.',
+  sharesOutstanding: 'Cover page of the 10-K, or the share count used for diluted EPS.',
+  sharePrice: "Today's market price per share.",
 };
 
 // A sensible default so the module opens with something real to see.
@@ -93,100 +162,142 @@ function rate(value: number, bands: [number, number], higherIsBetter: boolean): 
   }
 }
 
+// ---- Missing-input guards -------------------------------------------
+//
+// "Skip, never fake." A metric whose inputs are absent is omitted from the
+// list entirely; it is not computed from 0, and it is not rated. The one
+// thing this tool sells is that a number on screen can be trusted, so
+// showing a confident verdict derived from a blank field would be worse
+// than showing nothing.
+
+// Every argument must be a real, finite number.
+function has(...vals: (number | null)[]): boolean {
+  return vals.every((v) => v !== null && Number.isFinite(v));
+}
+
+// Denominators additionally must not be zero, or the metric is Infinity.
+function ratio(numerator: number | null, denominator: number | null): number | null {
+  if (!has(numerator, denominator)) return null;
+  if (denominator === 0) return null;
+  return (numerator as number) / (denominator as number);
+}
+
 // ============================================================
 // PROFITABILITY — how much profit the company squeezes out.
 // ============================================================
 export function profitability(c: CompanyInput): Metric[] {
-  const grossMargin = c.grossProfit / c.revenue;
-  const operatingMargin = c.operatingIncome / c.revenue;
-  const netMargin = c.netIncome / c.revenue;
-  const roe = c.netIncome / c.shareholdersEquity;
-  const roa = c.netIncome / c.totalAssets;
+  const out: Metric[] = [];
 
-  return [
-    {
-      key: 'grossMargin', label: 'Gross margin', value: grossMargin, display: pct(grossMargin),
-      meaning: `Of every $1 in sales, ${(grossMargin * 100).toFixed(0)}\u00A2 is left after the direct cost of making the product. Higher means pricing power.`,
-      ...verdictify(rate(grossMargin, [0.40, 0.25], true), 'gross margin'), higherIsBetter: true,
-    },
-    {
-      key: 'operatingMargin', label: 'Operating margin', value: operatingMargin, display: pct(operatingMargin),
-      meaning: `After running the whole business (not just making the product), ${(operatingMargin * 100).toFixed(0)}\u00A2 of each sales dollar remains. It shows core operating efficiency.`,
-      ...verdictify(rate(operatingMargin, [0.15, 0.08], true), 'operating margin'), higherIsBetter: true,
-    },
-    {
-      key: 'netMargin', label: 'Net margin', value: netMargin, display: pct(netMargin),
-      meaning: `The bottom line: ${(netMargin * 100).toFixed(0)}\u00A2 of every sales dollar becomes actual profit after everything — costs, interest, taxes.`,
-      ...verdictify(rate(netMargin, [0.15, 0.05], true), 'net margin'), higherIsBetter: true,
-    },
-    {
-      key: 'roe', label: 'Return on equity (ROE)', value: roe, display: pct(roe),
-      meaning: `For every $1 owners have invested, the company earned ${(roe * 100).toFixed(0)}\u00A2 this year. The headline profitability number — but watch how much debt drives it (see DuPont).`,
-      ...verdictify(rate(roe, [0.15, 0.08], true), 'ROE'), higherIsBetter: true,
-    },
-    {
-      key: 'roa', label: 'Return on assets (ROA)', value: roa, display: pct(roa),
-      meaning: `For every $1 of assets the company controls, it earned ${(roa * 100).toFixed(0)}\u00A2. Unlike ROE, debt can't flatter this — it measures raw asset efficiency.`,
-      ...verdictify(rate(roa, [0.08, 0.04], true), 'ROA'), higherIsBetter: true,
-    },
-  ];
+  const grossMargin = ratio(c.grossProfit, c.revenue);
+  if (grossMargin !== null) out.push({
+    key: 'grossMargin', label: 'Gross margin', value: grossMargin, display: pct(grossMargin),
+    meaning: `Of every $1 in sales, ${(grossMargin * 100).toFixed(0)}\u00A2 is left after the direct cost of making the product. Higher means pricing power.`,
+    ...verdictify(rate(grossMargin, [0.40, 0.25], true), 'gross margin'), higherIsBetter: true,
+  });
+
+  const operatingMargin = ratio(c.operatingIncome, c.revenue);
+  if (operatingMargin !== null) out.push({
+    key: 'operatingMargin', label: 'Operating margin', value: operatingMargin, display: pct(operatingMargin),
+    meaning: `After running the whole business (not just making the product), ${(operatingMargin * 100).toFixed(0)}\u00A2 of each sales dollar remains. It shows core operating efficiency.`,
+    ...verdictify(rate(operatingMargin, [0.15, 0.08], true), 'operating margin'), higherIsBetter: true,
+  });
+
+  const netMargin = ratio(c.netIncome, c.revenue);
+  if (netMargin !== null) out.push({
+    key: 'netMargin', label: 'Net margin', value: netMargin, display: pct(netMargin),
+    meaning: `The bottom line: ${(netMargin * 100).toFixed(0)}\u00A2 of every sales dollar becomes actual profit after everything — costs, interest, taxes.`,
+    ...verdictify(rate(netMargin, [0.15, 0.05], true), 'net margin'), higherIsBetter: true,
+  });
+
+  const roe = ratio(c.netIncome, c.shareholdersEquity);
+  if (roe !== null) out.push({
+    key: 'roe', label: 'Return on equity (ROE)', value: roe, display: pct(roe),
+    meaning: `For every $1 owners have invested, the company earned ${(roe * 100).toFixed(0)}\u00A2 this year. The headline profitability number — but watch how much debt drives it (see DuPont).`,
+    ...verdictify(rate(roe, [0.15, 0.08], true), 'ROE'), higherIsBetter: true,
+  });
+
+  const roa = ratio(c.netIncome, c.totalAssets);
+  if (roa !== null) out.push({
+    key: 'roa', label: 'Return on assets (ROA)', value: roa, display: pct(roa),
+    meaning: `For every $1 of assets the company controls, it earned ${(roa * 100).toFixed(0)}\u00A2. Unlike ROE, debt can't flatter this — it measures raw asset efficiency.`,
+    ...verdictify(rate(roa, [0.08, 0.04], true), 'ROA'), higherIsBetter: true,
+  });
+
+  return out;
 }
 
 // ============================================================
 // LIQUIDITY — can it pay its short-term bills?
 // ============================================================
 export function liquidity(c: CompanyInput): Metric[] {
-  const currentRatio = c.currentAssets / c.currentLiabilities;
-  const quickRatio = (c.currentAssets - c.inventory) / c.currentLiabilities;
-  const cashRatio = c.cash / c.currentLiabilities;
+  const out: Metric[] = [];
 
-  return [
-    {
-      key: 'currentRatio', label: 'Current ratio', value: currentRatio, display: mult(currentRatio),
-      meaning: `The company has $${currentRatio.toFixed(2)} of short-term assets for every $1 of bills due within a year. Above 1 means it can cover them; too high can mean idle cash.`,
-      ...verdictify(rate(currentRatio, [1.5, 1.0], true), 'current ratio'), higherIsBetter: true,
-    },
-    {
-      key: 'quickRatio', label: 'Quick ratio', value: quickRatio, display: mult(quickRatio),
-      meaning: `Like the current ratio but excludes inventory (which is hard to sell fast). $${quickRatio.toFixed(2)} of truly liquid assets per $1 of near-term bills — a stricter safety test.`,
-      ...verdictify(rate(quickRatio, [1.0, 0.7], true), 'quick ratio'), higherIsBetter: true,
-    },
-    {
-      key: 'cashRatio', label: 'Cash ratio', value: cashRatio, display: mult(cashRatio),
-      meaning: `The most conservative test: $${cashRatio.toFixed(2)} of pure cash per $1 of short-term bills. How much it could pay off today, without selling anything.`,
-      ...verdictify(rate(cashRatio, [0.5, 0.2], true), 'cash ratio'), higherIsBetter: true,
-    },
-  ];
+  const currentRatio = ratio(c.currentAssets, c.currentLiabilities);
+  if (currentRatio !== null) out.push({
+    key: 'currentRatio', label: 'Current ratio', value: currentRatio, display: mult(currentRatio),
+    meaning: `The company has $${currentRatio.toFixed(2)} of short-term assets for every $1 of bills due within a year. Above 1 means it can cover them; too high can mean idle cash.`,
+    ...verdictify(rate(currentRatio, [1.5, 1.0], true), 'current ratio'), higherIsBetter: true,
+  });
+
+  // Inventory blank means "not found", not "none". Skipping is the
+  // graceful degradation: a software company should enter 0 and get the
+  // ratio, rather than have us assume 0 on their behalf.
+  const quickRatio = has(c.currentAssets, c.inventory)
+    ? ratio((c.currentAssets as number) - (c.inventory as number), c.currentLiabilities)
+    : null;
+  if (quickRatio !== null) out.push({
+    key: 'quickRatio', label: 'Quick ratio', value: quickRatio, display: mult(quickRatio),
+    meaning: `Like the current ratio but excludes inventory (which is hard to sell fast). $${quickRatio.toFixed(2)} of truly liquid assets per $1 of near-term bills — a stricter safety test.`,
+    ...verdictify(rate(quickRatio, [1.0, 0.7], true), 'quick ratio'), higherIsBetter: true,
+  });
+
+  const cashRatio = ratio(c.cash, c.currentLiabilities);
+  if (cashRatio !== null) out.push({
+    key: 'cashRatio', label: 'Cash ratio', value: cashRatio, display: mult(cashRatio),
+    meaning: `The most conservative test: $${cashRatio.toFixed(2)} of pure cash per $1 of short-term bills. How much it could pay off today, without selling anything.`,
+    ...verdictify(rate(cashRatio, [0.5, 0.2], true), 'cash ratio'), higherIsBetter: true,
+  });
+
+  return out;
 }
 
 // ============================================================
 // LEVERAGE — how much debt, and can it handle it?
 // ============================================================
 export function leverage(c: CompanyInput): Metric[] {
-  const debtToEquity = c.totalDebt / c.shareholdersEquity;
-  const debtToAssets = c.totalDebt / c.totalAssets;
-  const interestCoverage = c.interestExpense > 0 ? c.operatingIncome / c.interestExpense : Infinity;
+  const out: Metric[] = [];
 
-  return [
-    {
-      key: 'debtToEquity', label: 'Debt-to-equity', value: debtToEquity, display: mult(debtToEquity),
-      meaning: `The company owes $${debtToEquity.toFixed(2)} of debt for every $1 of owner equity. Low is safer; high magnifies both gains and losses — and risk.`,
-      ...verdictify(rate(debtToEquity, [1.0, 2.0], false), 'debt-to-equity'), higherIsBetter: false,
-    },
-    {
-      key: 'debtToAssets', label: 'Debt-to-assets', value: debtToAssets, display: pct(debtToAssets),
-      meaning: `${(debtToAssets * 100).toFixed(0)}% of everything the company owns is financed by debt rather than owners. Lower means a sturdier balance sheet.`,
-      ...verdictify(rate(debtToAssets, [0.3, 0.5], false), 'debt-to-assets'), higherIsBetter: false,
-    },
-    {
+  const debtToEquity = ratio(c.totalDebt, c.shareholdersEquity);
+  if (debtToEquity !== null) out.push({
+    key: 'debtToEquity', label: 'Debt-to-equity', value: debtToEquity, display: mult(debtToEquity),
+    meaning: `The company owes $${debtToEquity.toFixed(2)} of debt for every $1 of owner equity. Low is safer; high magnifies both gains and losses — and risk.`,
+    ...verdictify(rate(debtToEquity, [1.0, 2.0], false), 'debt-to-equity'), higherIsBetter: false,
+  });
+
+  const debtToAssets = ratio(c.totalDebt, c.totalAssets);
+  if (debtToAssets !== null) out.push({
+    key: 'debtToAssets', label: 'Debt-to-assets', value: debtToAssets, display: pct(debtToAssets),
+    meaning: `${(debtToAssets * 100).toFixed(0)}% of everything the company owns is financed by debt rather than owners. Lower means a sturdier balance sheet.`,
+    ...verdictify(rate(debtToAssets, [0.3, 0.5], false), 'debt-to-assets'), higherIsBetter: false,
+  });
+
+  // A reported 0 is meaningful here ("no debt cost") and is NOT the same
+  // as a blank field, which we skip.
+  if (has(c.operatingIncome, c.interestExpense)) {
+    const interestCoverage = (c.interestExpense as number) > 0
+      ? (c.operatingIncome as number) / (c.interestExpense as number)
+      : Infinity;
+    out.push({
       key: 'interestCoverage', label: 'Interest coverage', value: interestCoverage,
       display: isFinite(interestCoverage) ? mult(interestCoverage) : 'no debt cost',
       meaning: isFinite(interestCoverage)
         ? `Operating profit covers the interest bill ${interestCoverage.toFixed(1)} times over. Higher means comfortably able to service debt; near 1 is dangerous.`
         : `The company reports no interest expense — it isn't burdened by debt payments.`,
       ...verdictify(rate(isFinite(interestCoverage) ? interestCoverage : 99, [6, 2.5], true), 'interest coverage'), higherIsBetter: true,
-    },
-  ];
+    });
+  }
+
+  return out;
 }
 
 // ============================================================
@@ -194,29 +305,32 @@ export function leverage(c: CompanyInput): Metric[] {
 // its profit backed by real cash?
 // ============================================================
 export function efficiency(c: CompanyInput): Metric[] {
-  const assetTurnover = c.revenue / c.totalAssets;
-  const fcf = c.operatingCashFlow - c.capex;
-  const fcfMargin = fcf / c.revenue;
-  // Cash conversion: does reported profit turn into real operating cash?
-  const cashConversion = c.netIncome !== 0 ? c.operatingCashFlow / c.netIncome : 0;
+  const out: Metric[] = [];
 
-  return [
-    {
-      key: 'assetTurnover', label: 'Asset turnover', value: assetTurnover, display: mult(assetTurnover),
-      meaning: `Each $1 of assets generates $${assetTurnover.toFixed(2)} of sales per year. Higher means the company sweats its assets harder (retailers high, utilities low).`,
-      ...verdictify(rate(assetTurnover, [1.0, 0.5], true), 'asset turnover'), higherIsBetter: true,
-    },
-    {
-      key: 'fcfMargin', label: 'Free cash flow margin', value: fcfMargin, display: pct(fcfMargin),
-      meaning: `After paying to maintain and grow its asset base, the company keeps ${(fcfMargin * 100).toFixed(0)}\u00A2 of real, spendable cash per sales dollar. This is the cash that funds dividends, buybacks, and debt paydown.`,
-      ...verdictify(rate(fcfMargin, [0.12, 0.05], true), 'FCF margin'), higherIsBetter: true,
-    },
-    {
-      key: 'cashConversion', label: 'Cash conversion', value: cashConversion, display: mult(cashConversion),
-      meaning: `For every $1 of reported profit, the business produced $${cashConversion.toFixed(2)} of actual operating cash. Near or above 1 means earnings are cash-backed and real; well below 1 is a quality red flag.`,
-      ...verdictify(rate(cashConversion, [0.9, 0.7], true), 'cash conversion'), higherIsBetter: true,
-    },
-  ];
+  const assetTurnover = ratio(c.revenue, c.totalAssets);
+  if (assetTurnover !== null) out.push({
+    key: 'assetTurnover', label: 'Asset turnover', value: assetTurnover, display: mult(assetTurnover),
+    meaning: `Each $1 of assets generates $${assetTurnover.toFixed(2)} of sales per year. Higher means the company sweats its assets harder (retailers high, utilities low).`,
+    ...verdictify(rate(assetTurnover, [1.0, 0.5], true), 'asset turnover'), higherIsBetter: true,
+  });
+
+  const fcfMargin = has(c.operatingCashFlow, c.capex)
+    ? ratio((c.operatingCashFlow as number) - (c.capex as number), c.revenue)
+    : null;
+  if (fcfMargin !== null) out.push({
+    key: 'fcfMargin', label: 'Free cash flow margin', value: fcfMargin, display: pct(fcfMargin),
+    meaning: `After paying to maintain and grow its asset base, the company keeps ${(fcfMargin * 100).toFixed(0)}\u00A2 of real, spendable cash per sales dollar. This is the cash that funds dividends, buybacks, and debt paydown.`,
+    ...verdictify(rate(fcfMargin, [0.12, 0.05], true), 'FCF margin'), higherIsBetter: true,
+  });
+
+  const cashConversion = ratio(c.operatingCashFlow, c.netIncome);
+  if (cashConversion !== null) out.push({
+    key: 'cashConversion', label: 'Cash conversion', value: cashConversion, display: mult(cashConversion),
+    meaning: `For every $1 of reported profit, the business produced $${cashConversion.toFixed(2)} of actual operating cash. Near or above 1 means earnings are cash-backed and real; well below 1 is a quality red flag.`,
+    ...verdictify(rate(cashConversion, [0.9, 0.7], true), 'cash conversion'), higherIsBetter: true,
+  });
+
+  return out;
 }
 
 // ============================================================
@@ -233,12 +347,18 @@ export type DuPont = {
   driver: string;           // which factor dominates, in words
 };
 
-export function dupont(c: CompanyInput): DuPont {
-  const netMargin = c.netIncome / c.revenue;
-  const assetTurnover = c.revenue / c.totalAssets;
-  const equityMultiplier = c.totalAssets / c.shareholdersEquity;
+// Returns null when any of the four inputs is missing. Callers must render
+// nothing rather than a partial decomposition.
+export function dupont(c: CompanyInput): DuPont | null {
+  const netMargin = ratio(c.netIncome, c.revenue);
+  const assetTurnover = ratio(c.revenue, c.totalAssets);
+  const equityMultiplier = ratio(c.totalAssets, c.shareholdersEquity);
+  const roeReported = ratio(c.netIncome, c.shareholdersEquity);
+  if (netMargin === null || assetTurnover === null || equityMultiplier === null || roeReported === null) {
+    return null;
+  }
+
   const roe = netMargin * assetTurnover * equityMultiplier;
-  const roeReported = c.netIncome / c.shareholdersEquity;
 
   // Identify the standout driver for a plain-English takeaway.
   let driver: string;

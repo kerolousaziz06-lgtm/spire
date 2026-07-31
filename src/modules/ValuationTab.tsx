@@ -11,7 +11,8 @@
 // statements -> valuation connection, but stay directly editable.
 // ============================================================
 import { useMemo, useState, useEffect } from 'react';
-import type { CompanyInput } from '../lib/analysis';
+import { missingFields, type CompanyInput, type CompanyField } from '../lib/analysis';
+import { MissingData } from '../components/MissingData';
 import { runDcf, dcfSensitivity, type DcfInput } from '../lib/dcf';
 import { Card } from '../components/Card';
 import './ValuationTab.css';
@@ -22,10 +23,19 @@ const VERDICT_WORD = {
   overvalued: 'Overvalued',
 };
 
+// A DCF needs free cash flow, the bridge from enterprise to equity
+// value, and a share count and price to compare against.
+const DCF_REQUIRES: readonly CompanyField[] = [
+  'operatingCashFlow', 'capex', 'totalDebt', 'cash', 'sharesOutstanding', 'sharePrice',
+];
+
 export function ValuationTab({ input }: { input: CompanyInput }) {
+  const missing = missingFields(input, DCF_REQUIRES);
   // Assumptions the user can tune. Pre-filled from the statements.
-  const baseFcf = Math.max(0, input.operatingCashFlow - input.capex);
-  const netDebt = input.totalDebt - input.cash;
+  // The ?? 0 fallbacks only keep the hooks below unconditional; nothing
+  // derived from them renders while `missing` is non-empty.
+  const baseFcf = Math.max(0, (input.operatingCashFlow ?? 0) - (input.capex ?? 0));
+  const netDebt = (input.totalDebt ?? 0) - (input.cash ?? 0);
 
   const [growth, setGrowth] = useState(0.08);
   const [years, setYears] = useState(10);
@@ -35,7 +45,7 @@ export function ValuationTab({ input }: { input: CompanyInput }) {
   // Re-derive base FCF / net debt if the underlying inputs change.
   const dcfInput: DcfInput = useMemo(() => ({
     baseFcf, growth, years, terminalGrowth, discountRate,
-    netDebt, sharesOutstanding: input.sharesOutstanding, sharePrice: input.sharePrice,
+    netDebt, sharesOutstanding: input.sharesOutstanding ?? 0, sharePrice: input.sharePrice ?? 0,
   }), [baseFcf, growth, years, terminalGrowth, discountRate, netDebt, input.sharesOutstanding, input.sharePrice]);
 
   const result = useMemo(() => runDcf(dcfInput), [dcfInput]);
@@ -47,6 +57,17 @@ export function ValuationTab({ input }: { input: CompanyInput }) {
   const [pulse, setPulse] = useState(0);
   useEffect(() => { setPulse((k) => k + 1); }, [result.intrinsicPerShare]);
 
+  if (missing.length > 0) {
+    return (
+      <div className="valuation">
+        <MissingData what="the DCF valuation" fields={missing} />
+      </div>
+    );
+  }
+
+  // Narrowed by the guard above: the DCF inputs are all present here.
+  const sharePrice = input.sharePrice as number;
+
   return (
     <div className="val">
       {/* Hero: intrinsic value vs price */}
@@ -56,7 +77,7 @@ export function ValuationTab({ input }: { input: CompanyInput }) {
             <div className="val-label">INTRINSIC VALUE / SHARE</div>
             <div key={pulse} className="val-intrinsic tabular is-fresh">${result.intrinsicPerShare.toFixed(2)}</div>
             <div className="val-vs">
-              vs. market price <span className="tabular">${input.sharePrice.toFixed(2)}</span>
+              vs. market price <span className="tabular">${sharePrice.toFixed(2)}</span>
             </div>
           </div>
           <div className="val-verdict-side">
@@ -151,7 +172,7 @@ export function ValuationTab({ input }: { input: CompanyInput }) {
                 <tr key={i}>
                   <th className="tabular">{(sens.terminalGrowths[i] * 100).toFixed(2)}%</th>
                   {row.map((cell, j) => {
-                    const diff = (cell.value - input.sharePrice) / input.sharePrice;
+                    const diff = (cell.value - sharePrice) / sharePrice;
                     const cls = diff > 0.1 ? 'is-under' : diff < -0.1 ? 'is-over' : 'is-fair';
                     return (
                       <td key={j} className={`tabular val-sens-cell ${cls}`}>
