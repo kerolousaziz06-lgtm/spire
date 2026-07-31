@@ -1,10 +1,12 @@
 // ============================================================
 // hooks.ts — small reusable hooks.
-//   useCountUp     — animates a number from 0 to target when triggered
-//   useReveal      — adds 'is-visible' when an element scrolls into view
-//   useElementSize — reports an element's live pixel size
+//   useCountUp        — animates a number from 0 to target when triggered
+//   useReveal         — adds 'is-visible' when an element scrolls into view
+//   useElementSize    — reports an element's live pixel size
+//   usePersistedState — useState that survives reloads, via persist.ts
 // ============================================================
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { loadPersisted, savePersisted, clearPersisted } from './persist';
 
 // Animate a number up to `target` over `duration` ms, easing out.
 export function useCountUp(target: number, duration = 1100, start = true): number {
@@ -72,4 +74,38 @@ export function useElementSize<T extends HTMLElement = HTMLDivElement>() {
     return () => obs.disconnect();
   }, []);
   return { ref, ...size };
+}
+
+// useState that survives a reload.
+//
+// Reads once on mount (lazy initialiser, so the parse happens a single
+// time rather than on every render) and writes on every change. `reset`
+// clears storage and returns to the sample default, which is what the
+// "Reset to sample" controls call — without it, someone who half-fills a
+// company has no route back to a working demo.
+//
+// `revive` must vouch for the stored shape; see persist.ts for why.
+export function usePersistedState<T>(
+  key: string,
+  initial: T,
+  revive: (raw: unknown, fallback: T) => T | null
+): [T, (next: T) => void, () => void] {
+  const [value, setValue] = useState<T>(() => loadPersisted(key, initial, revive));
+
+  // Keep the initial value and reviver in refs so `set` and `reset` stay
+  // stable across renders even when callers pass inline literals.
+  const initialRef = useRef(initial);
+  const keyRef = useRef(key);
+
+  const set = useCallback((next: T) => {
+    setValue(next);
+    savePersisted(keyRef.current, next);
+  }, []);
+
+  const reset = useCallback(() => {
+    clearPersisted(keyRef.current);
+    setValue(initialRef.current);
+  }, []);
+
+  return [value, set, reset];
 }

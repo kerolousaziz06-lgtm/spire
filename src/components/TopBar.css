@@ -64,3 +64,21 @@
   box-shadow: none;
 }
 .pill:focus-visible { outline: 2px solid var(--accent-bright); outline-offset: 2px; }
+
+/* Quiet ghost button. Deliberately understated: destructive-ish, and it
+   should not compete with the simulation pills beside it. */
+.topbar-reset {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: color 160ms ease, border-color 160ms ease;
+}
+.topbar-reset:hover { color: var(--text-primary); border-color: var(--border-strong); }
+.topbar-reset:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

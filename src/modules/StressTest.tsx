@@ -1,11 +1,14 @@
 // ============================================================
 // StressTest.tsx — the module, now fully wired (Week 3).
 //
-// This is the "conductor." It owns two pieces of state:
-//   • holdings   — the user's portfolio (from the builder)
+// This is the "conductor." It owns the view state:
 //   • numPaths   — how many futures to simulate (from the pills)
+//   • years, viewMode, editorOpen
 //
-// Whenever either changes, useMemo re-runs the Monte Carlo engine
+// It does NOT own `holdings`. That is the user's data and lives in
+// App.tsx, above the point where this component unmounts on navigation.
+//
+// Whenever holdings or numPaths change, useMemo re-runs the engine
 // and every child (stat cards, fan chart, risk profile) receives
 // fresh real numbers. This is the reactive "cockpit": change a
 // control on the left, watch everything recompute.
@@ -27,18 +30,18 @@ import { fmtMoney, fmtPctSigned, fmtPct } from '../lib/format';
 import './StressTest.css';
 
 
-// The portfolio the app starts with.
-const INITIAL_HOLDINGS: Holding[] = [
-  { assetId: 'us_stocks', dollars: 50000 },
-  { assetId: 'nasdaq',    dollars: 20000 },
-  { assetId: 'bonds',     dollars: 20000 },
-  { assetId: 'cash',      dollars: 10000 },
-];
-
 const DEFAULT_YEARS = 10;
 
-export function StressTest() {
-  const [holdings, setHoldings] = useState<Holding[]>(INITIAL_HOLDINGS);
+// `holdings` lives in App, not here. This component unmounts whenever the
+// user navigates to another module, so state held locally would be lost.
+// See the note at the top of App.tsx.
+type Props = {
+  holdings: Holding[];
+  onHoldings: (next: Holding[]) => void;
+  onResetHoldings: () => void;
+};
+
+export function StressTest({ holdings, onHoldings, onResetHoldings }: Props) {
   const [numPaths, setNumPaths] = useState(5000);
   const [editorOpen, setEditorOpen] = useState(false);
   const [years, setYears] = useState(DEFAULT_YEARS);
@@ -82,6 +85,8 @@ export function StressTest() {
         subtitle="Simulate thousands of possible futures and replay historical crashes"
         numPaths={numPaths}
         onNumPaths={setNumPaths}
+        onReset={onResetHoldings}
+        resetLabel="Reset portfolio"
       />
 
       <div className="cockpit">
@@ -239,7 +244,7 @@ export function StressTest() {
       {editorOpen && (
         <PortfolioEditor
           holdings={holdings}
-          onSave={(next) => { setHoldings(next); setEditorOpen(false); }}
+          onSave={(next) => { onHoldings(next); setEditorOpen(false); }}
           onClose={() => setEditorOpen(false)}
         />
       )}

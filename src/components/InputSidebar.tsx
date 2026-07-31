@@ -13,6 +13,10 @@ import './InputSidebar.css';
 type Props = {
   input: CompanyInput;
   onChange: (next: CompanyInput) => void;
+  // Clears the saved figures and restores the sample company. Once the
+  // inputs persist, a half-filled company otherwise has no way back to a
+  // working demo state.
+  onReset: () => void;
   collapsed: boolean;
   onToggle: () => void;
 };
@@ -59,7 +63,7 @@ const GROUPS: { title: string; fields: { key: keyof CompanyInput; label: string 
   },
 ];
 
-export function InputSidebar({ input, onChange, collapsed, onToggle }: Props) {
+export function InputSidebar({ input, onChange, onReset, collapsed, onToggle }: Props) {
   const [group, setGroup] = useState(0); // which statement group is open
 
   function setField(key: keyof CompanyInput, raw: string) {
@@ -117,9 +121,18 @@ export function InputSidebar({ input, onChange, collapsed, onToggle }: Props) {
         ))}
       </div>
 
-      <p className="isb-note">
-        All figures in the same unit (e.g. billions). Values flow into every tab.
-      </p>
+      <div className="isb-foot">
+        <button
+          className="isb-reset"
+          onClick={onReset}
+          title="Discard your figures and restore the sample company"
+        >
+          Reset to sample
+        </button>
+        <p className="isb-note">
+          All figures in the same unit (e.g. billions). Values flow into every tab.
+        </p>
+      </div>
     </aside>
   );
 }

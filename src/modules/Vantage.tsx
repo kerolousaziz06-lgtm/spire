@@ -1,9 +1,14 @@
 // ============================================================
 // Vantage.tsx — the company-analysis module conductor.
 //
-// Holds the ONE shared company input, the collapsible input
-// sidebar, and the three analysis tabs (Health / Valuation /
-// Summary). Same data underneath; each tab is a different lens.
+// Holds the collapsible input sidebar and the analysis tabs
+// (Health / Valuation / LBO / Summary). Same data underneath; each tab
+// is a different lens.
+//
+// It does NOT own the company figures. Those are the user's data and
+// live in App.tsx, above the point where this component unmounts on
+// navigation. Entering a company takes about five minutes; losing it by
+// clicking another module was not acceptable.
 // ============================================================
 import { useState } from 'react';
 import { InputSidebar } from '../components/InputSidebar';
@@ -11,7 +16,7 @@ import { HealthTab } from './HealthTab';
 import { ValuationTab } from './ValuationTab';
 import { SummaryTab } from './SummaryTab';
 import { LboTab } from './LboTab';
-import { SAMPLE_INPUT, type CompanyInput } from '../lib/analysis';
+import { type CompanyInput } from '../lib/analysis';
 import './Vantage.css';
 
 type Tab = 'health' | 'valuation' | 'lbo' | 'summary';
@@ -23,8 +28,13 @@ const TABS: { id: Tab; label: string; blurb: string }[] = [
   { id: 'summary', label: 'Summary', blurb: 'The combined verdict' },
 ];
 
-export function Vantage() {
-  const [input, setInput] = useState<CompanyInput>(SAMPLE_INPUT);
+type Props = {
+  input: CompanyInput;
+  onInput: (next: CompanyInput) => void;
+  onResetInput: () => void;
+};
+
+export function Vantage({ input, onInput, onResetInput }: Props) {
   const [tab, setTab] = useState<Tab>('health');
   const [collapsed, setCollapsed] = useState(false);
 
@@ -32,7 +42,8 @@ export function Vantage() {
     <div className="vantage">
       <InputSidebar
         input={input}
-        onChange={setInput}
+        onChange={onInput}
+        onReset={onResetInput}
         collapsed={collapsed}
         onToggle={() => setCollapsed((c) => !c)}
       />
