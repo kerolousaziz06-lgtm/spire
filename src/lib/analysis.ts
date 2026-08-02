@@ -137,8 +137,11 @@ export type Metric = {
   value: number;
   display: string;      // preformatted (e.g. "24.0%" or "1.85×")
   meaning: string;      // plain-English "what this tells you"
-  health: Health;
+  // null when the figures it depends on failed a reconciliation check.
+  // The value still shows; the judgement is withheld.
+  health: Health | null;
   verdict: string;      // short health label (e.g. "strong", "thin")
+  inputs: CompanyField[];  // which fields it was computed from
   higherIsBetter: boolean;
 };
 
@@ -160,6 +163,127 @@ function rate(value: number, bands: [number, number], higherIsBetter: boolean): 
     if (value <= b) return { health: 'ok' };
     return { health: 'bad' };
   }
+}
+
+// ============================================================
+// RECONCILIATION — do these figures describe a real company?
+//
+// Every ratio here is arithmetic on whatever the user typed. Without a
+// check, revenue 90 with gross profit 180 yields a 200% gross margin, a
+// 136.7% operating margin and a 104.4% net margin, and the tool rates all
+// three STRONG. A product whose entire value is trustworthy
+// interpretation must never put a confident verdict on nonsense.
+//
+// Two severities, because the distinction is real:
+//   error   — an arithmetic impossibility. Ratings that depend on the
+//             offending fields are withheld.
+//   caution — unusual but genuinely possible (a one-off gain can push net
+//             income above operating income). Flagged, never suppressed.
+// ============================================================
+
+export type ReconSeverity = 'error' | 'caution';
+
+export type ReconIssue = {
+  id: string;
+  severity: ReconSeverity;
+  fields: CompanyField[];   // which inputs to flag in the sidebar
+  message: string;
+};
+
+// Only compare figures the user actually supplied.
+const both = (a: number | null, b: number | null): boolean =>
+  a !== null && b !== null && Number.isFinite(a) && Number.isFinite(b);
+
+export function reconcile(c: CompanyInput): ReconIssue[] {
+  const issues: ReconIssue[] = [];
+  const err = (id: string, fields: CompanyField[], message: string) =>
+    issues.push({ id, severity: 'error', fields, message });
+  const caution = (id: string, fields: CompanyField[], message: string) =>
+    issues.push({ id, severity: 'caution', fields, message });
+
+  // ---- Income statement: each line is a subtotal of the one above ----
+  if (both(c.grossProfit, c.revenue) && (c.grossProfit as number) > (c.revenue as number)) {
+    err('gp>rev', ['grossProfit', 'revenue'],
+      'Gross profit is larger than revenue. Gross profit is revenue minus the cost of goods sold, so it cannot exceed the top line.');
+  }
+  if (both(c.operatingIncome, c.grossProfit) && (c.operatingIncome as number) > (c.grossProfit as number)) {
+    err('oi>gp', ['operatingIncome', 'grossProfit'],
+      'Operating income is larger than gross profit. Operating expenses are subtracted from gross profit, so it cannot be higher.');
+  }
+  if (both(c.netIncome, c.operatingIncome) && (c.netIncome as number) > (c.operatingIncome as number)) {
+    caution('ni>oi', ['netIncome', 'operatingIncome'],
+      'Net income exceeds operating income. Possible through one-off gains, investment income or a tax benefit, but worth confirming.');
+  }
+  if (c.revenue !== null && (c.revenue as number) < 0) {
+    err('rev<0', ['revenue'], 'Revenue cannot be negative.');
+  }
+
+  // ---- Balance sheet: subtotals and the accounting identity ----
+  if (both(c.currentAssets, c.totalAssets) && (c.currentAssets as number) > (c.totalAssets as number)) {
+    err('ca>ta', ['currentAssets', 'totalAssets'],
+      'Current assets exceed total assets. Current assets are a subset of the total.');
+  }
+  if (both(c.totalLiabilities, c.totalAssets) && (c.totalLiabilities as number) > (c.totalAssets as number)) {
+    err('tl>ta', ['totalLiabilities', 'totalAssets'],
+      'Total liabilities exceed total assets, which would mean negative equity. Check both figures, and enter equity directly if it really is negative.');
+  }
+  if (both(c.inventory, c.currentAssets) && (c.inventory as number) > (c.currentAssets as number)) {
+    err('inv>ca', ['inventory', 'currentAssets'],
+      'Inventory exceeds current assets. Inventory is one component of current assets.');
+  }
+  if (both(c.cash, c.currentAssets) && (c.cash as number) > (c.currentAssets as number)) {
+    err('cash>ca', ['cash', 'currentAssets'],
+      'Cash exceeds current assets. Cash is one component of current assets.');
+  }
+  if (both(c.currentLiabilities, c.totalLiabilities) && (c.currentLiabilities as number) > (c.totalLiabilities as number)) {
+    err('cl>tl', ['currentLiabilities', 'totalLiabilities'],
+      'Current liabilities exceed total liabilities. Current liabilities are a subset of the total.');
+  }
+  if (c.totalAssets !== null && (c.totalAssets as number) <= 0) {
+    err('ta<=0', ['totalAssets'], 'Total assets must be greater than zero.');
+  }
+
+  // Assets = Liabilities + Equity. Tolerance of 1% of total assets, since
+  // filings round and the user may be typing from a summary table.
+  if (c.totalAssets !== null && c.totalLiabilities !== null && c.shareholdersEquity !== null) {
+    const implied = (c.totalAssets as number) - (c.totalLiabilities as number);
+    const gap = Math.abs((c.shareholdersEquity as number) - implied);
+    const tol = Math.max(Math.abs(c.totalAssets as number) * 0.01, 1e-9);
+    if (gap > tol) {
+      err('identity', ['shareholdersEquity', 'totalAssets', 'totalLiabilities'],
+        `The balance sheet does not balance. Assets minus liabilities implies equity of ${money(implied)}, but ${money(c.shareholdersEquity as number)} was entered — a gap of ${money(gap)}.`);
+    }
+  }
+
+  // ---- Cash flow ----
+  if (c.capex !== null && (c.capex as number) < 0) {
+    caution('capex<0', ['capex'],
+      'Capital expenditures are usually entered as a positive number, even though the cash flow statement shows them as an outflow.');
+  }
+
+  return issues;
+}
+
+// Fields caught by an ERROR. Any metric depending on one of these has its
+// rating withheld: the value is still arithmetic, but a good/average/bad
+// judgement on an impossible figure would be worse than no judgement.
+export function unratableFields(issues: ReconIssue[]): Set<CompanyField> {
+  const out = new Set<CompanyField>();
+  for (const i of issues) {
+    if (i.severity === 'error') for (const f of i.fields) out.add(f);
+  }
+  return out;
+}
+
+// Strip the verdict from any metric that leans on a contradicted field.
+export function applyReconciliation(metrics: Metric[], issues: ReconIssue[]): Metric[] {
+  const bad = unratableFields(issues);
+  if (bad.size === 0) return metrics;
+  return metrics.map((m) => {
+    const hit = m.inputs.find((f) => bad.has(f));
+    if (!hit) return m;
+    return { ...m, health: null, verdict: 'unrated' };
+  });
 }
 
 // ---- Missing-input guards -------------------------------------------
@@ -192,35 +316,35 @@ export function profitability(c: CompanyInput): Metric[] {
   if (grossMargin !== null) out.push({
     key: 'grossMargin', label: 'Gross margin', value: grossMargin, display: pct(grossMargin),
     meaning: `Of every $1 in sales, ${(grossMargin * 100).toFixed(0)}\u00A2 is left after the direct cost of making the product. Higher means pricing power.`,
-    ...verdictify(rate(grossMargin, [0.40, 0.25], true), 'gross margin'), higherIsBetter: true,
+    ...verdictify(rate(grossMargin, [0.40, 0.25], true), 'gross margin'), inputs: ['grossProfit', 'revenue'], higherIsBetter: true,
   });
 
   const operatingMargin = ratio(c.operatingIncome, c.revenue);
   if (operatingMargin !== null) out.push({
     key: 'operatingMargin', label: 'Operating margin', value: operatingMargin, display: pct(operatingMargin),
     meaning: `After running the whole business (not just making the product), ${(operatingMargin * 100).toFixed(0)}\u00A2 of each sales dollar remains. It shows core operating efficiency.`,
-    ...verdictify(rate(operatingMargin, [0.15, 0.08], true), 'operating margin'), higherIsBetter: true,
+    ...verdictify(rate(operatingMargin, [0.15, 0.08], true), 'operating margin'), inputs: ['operatingIncome', 'revenue'], higherIsBetter: true,
   });
 
   const netMargin = ratio(c.netIncome, c.revenue);
   if (netMargin !== null) out.push({
     key: 'netMargin', label: 'Net margin', value: netMargin, display: pct(netMargin),
     meaning: `The bottom line: ${(netMargin * 100).toFixed(0)}\u00A2 of every sales dollar becomes actual profit after everything — costs, interest, taxes.`,
-    ...verdictify(rate(netMargin, [0.15, 0.05], true), 'net margin'), higherIsBetter: true,
+    ...verdictify(rate(netMargin, [0.15, 0.05], true), 'net margin'), inputs: ['netIncome', 'revenue'], higherIsBetter: true,
   });
 
   const roe = ratio(c.netIncome, c.shareholdersEquity);
   if (roe !== null) out.push({
     key: 'roe', label: 'Return on equity (ROE)', value: roe, display: pct(roe),
     meaning: `For every $1 owners have invested, the company earned ${(roe * 100).toFixed(0)}\u00A2 this year. The headline profitability number — but watch how much debt drives it (see DuPont).`,
-    ...verdictify(rate(roe, [0.15, 0.08], true), 'ROE'), higherIsBetter: true,
+    ...verdictify(rate(roe, [0.15, 0.08], true), 'ROE'), inputs: ['netIncome', 'shareholdersEquity'], higherIsBetter: true,
   });
 
   const roa = ratio(c.netIncome, c.totalAssets);
   if (roa !== null) out.push({
     key: 'roa', label: 'Return on assets (ROA)', value: roa, display: pct(roa),
     meaning: `For every $1 of assets the company controls, it earned ${(roa * 100).toFixed(0)}\u00A2. Unlike ROE, debt can't flatter this — it measures raw asset efficiency.`,
-    ...verdictify(rate(roa, [0.08, 0.04], true), 'ROA'), higherIsBetter: true,
+    ...verdictify(rate(roa, [0.08, 0.04], true), 'ROA'), inputs: ['netIncome', 'totalAssets'], higherIsBetter: true,
   });
 
   return out;
@@ -236,7 +360,7 @@ export function liquidity(c: CompanyInput): Metric[] {
   if (currentRatio !== null) out.push({
     key: 'currentRatio', label: 'Current ratio', value: currentRatio, display: mult(currentRatio),
     meaning: `The company has $${currentRatio.toFixed(2)} of short-term assets for every $1 of bills due within a year. Above 1 means it can cover them; too high can mean idle cash.`,
-    ...verdictify(rate(currentRatio, [1.5, 1.0], true), 'current ratio'), higherIsBetter: true,
+    ...verdictify(rate(currentRatio, [1.5, 1.0], true), 'current ratio'), inputs: ['currentAssets', 'currentLiabilities'], higherIsBetter: true,
   });
 
   // Inventory blank means "not found", not "none". Skipping is the
@@ -248,14 +372,14 @@ export function liquidity(c: CompanyInput): Metric[] {
   if (quickRatio !== null) out.push({
     key: 'quickRatio', label: 'Quick ratio', value: quickRatio, display: mult(quickRatio),
     meaning: `Like the current ratio but excludes inventory (which is hard to sell fast). $${quickRatio.toFixed(2)} of truly liquid assets per $1 of near-term bills — a stricter safety test.`,
-    ...verdictify(rate(quickRatio, [1.0, 0.7], true), 'quick ratio'), higherIsBetter: true,
+    ...verdictify(rate(quickRatio, [1.0, 0.7], true), 'quick ratio'), inputs: ['currentAssets', 'inventory', 'currentLiabilities'], higherIsBetter: true,
   });
 
   const cashRatio = ratio(c.cash, c.currentLiabilities);
   if (cashRatio !== null) out.push({
     key: 'cashRatio', label: 'Cash ratio', value: cashRatio, display: mult(cashRatio),
     meaning: `The most conservative test: $${cashRatio.toFixed(2)} of pure cash per $1 of short-term bills. How much it could pay off today, without selling anything.`,
-    ...verdictify(rate(cashRatio, [0.5, 0.2], true), 'cash ratio'), higherIsBetter: true,
+    ...verdictify(rate(cashRatio, [0.5, 0.2], true), 'cash ratio'), inputs: ['cash', 'currentLiabilities'], higherIsBetter: true,
   });
 
   return out;
@@ -271,14 +395,14 @@ export function leverage(c: CompanyInput): Metric[] {
   if (debtToEquity !== null) out.push({
     key: 'debtToEquity', label: 'Debt-to-equity', value: debtToEquity, display: mult(debtToEquity),
     meaning: `The company owes $${debtToEquity.toFixed(2)} of debt for every $1 of owner equity. Low is safer; high magnifies both gains and losses — and risk.`,
-    ...verdictify(rate(debtToEquity, [1.0, 2.0], false), 'debt-to-equity'), higherIsBetter: false,
+    ...verdictify(rate(debtToEquity, [1.0, 2.0], false), 'debt-to-equity'), inputs: ['totalDebt', 'shareholdersEquity'], higherIsBetter: false,
   });
 
   const debtToAssets = ratio(c.totalDebt, c.totalAssets);
   if (debtToAssets !== null) out.push({
     key: 'debtToAssets', label: 'Debt-to-assets', value: debtToAssets, display: pct(debtToAssets),
     meaning: `${(debtToAssets * 100).toFixed(0)}% of everything the company owns is financed by debt rather than owners. Lower means a sturdier balance sheet.`,
-    ...verdictify(rate(debtToAssets, [0.3, 0.5], false), 'debt-to-assets'), higherIsBetter: false,
+    ...verdictify(rate(debtToAssets, [0.3, 0.5], false), 'debt-to-assets'), inputs: ['totalDebt', 'totalAssets'], higherIsBetter: false,
   });
 
   // A reported 0 is meaningful here ("no debt cost") and is NOT the same
@@ -293,7 +417,7 @@ export function leverage(c: CompanyInput): Metric[] {
       meaning: isFinite(interestCoverage)
         ? `Operating profit covers the interest bill ${interestCoverage.toFixed(1)} times over. Higher means comfortably able to service debt; near 1 is dangerous.`
         : `The company reports no interest expense — it isn't burdened by debt payments.`,
-      ...verdictify(rate(isFinite(interestCoverage) ? interestCoverage : 99, [6, 2.5], true), 'interest coverage'), higherIsBetter: true,
+      ...verdictify(rate(isFinite(interestCoverage) ? interestCoverage : 99, [6, 2.5], true), 'interest coverage'), inputs: ['operatingIncome', 'interestExpense'], higherIsBetter: true,
     });
   }
 
@@ -311,7 +435,7 @@ export function efficiency(c: CompanyInput): Metric[] {
   if (assetTurnover !== null) out.push({
     key: 'assetTurnover', label: 'Asset turnover', value: assetTurnover, display: mult(assetTurnover),
     meaning: `Each $1 of assets generates $${assetTurnover.toFixed(2)} of sales per year. Higher means the company sweats its assets harder (retailers high, utilities low).`,
-    ...verdictify(rate(assetTurnover, [1.0, 0.5], true), 'asset turnover'), higherIsBetter: true,
+    ...verdictify(rate(assetTurnover, [1.0, 0.5], true), 'asset turnover'), inputs: ['revenue', 'totalAssets'], higherIsBetter: true,
   });
 
   const fcfMargin = has(c.operatingCashFlow, c.capex)
@@ -320,14 +444,14 @@ export function efficiency(c: CompanyInput): Metric[] {
   if (fcfMargin !== null) out.push({
     key: 'fcfMargin', label: 'Free cash flow margin', value: fcfMargin, display: pct(fcfMargin),
     meaning: `After paying to maintain and grow its asset base, the company keeps ${(fcfMargin * 100).toFixed(0)}\u00A2 of real, spendable cash per sales dollar. This is the cash that funds dividends, buybacks, and debt paydown.`,
-    ...verdictify(rate(fcfMargin, [0.12, 0.05], true), 'FCF margin'), higherIsBetter: true,
+    ...verdictify(rate(fcfMargin, [0.12, 0.05], true), 'FCF margin'), inputs: ['operatingCashFlow', 'capex', 'revenue'], higherIsBetter: true,
   });
 
   const cashConversion = ratio(c.operatingCashFlow, c.netIncome);
   if (cashConversion !== null) out.push({
     key: 'cashConversion', label: 'Cash conversion', value: cashConversion, display: mult(cashConversion),
     meaning: `For every $1 of reported profit, the business produced $${cashConversion.toFixed(2)} of actual operating cash. Near or above 1 means earnings are cash-backed and real; well below 1 is a quality red flag.`,
-    ...verdictify(rate(cashConversion, [0.9, 0.7], true), 'cash conversion'), higherIsBetter: true,
+    ...verdictify(rate(cashConversion, [0.9, 0.7], true), 'cash conversion'), inputs: ['operatingCashFlow', 'netIncome'], higherIsBetter: true,
   });
 
   return out;

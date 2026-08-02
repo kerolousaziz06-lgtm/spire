@@ -16,6 +16,8 @@
 .health-badge--good { color: var(--gain); }
 .health-badge--ok   { color: var(--warn); }
 .health-badge--bad  { color: var(--loss); }
+/* No colour: a withheld verdict is not a rating on a scale. */
+.health-badge--withheld { color: var(--text-muted); }
 .health-headline-sub {
   margin-top: var(--s2);
   font-size: var(--fs-base);

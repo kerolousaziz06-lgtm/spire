@@ -10,7 +10,8 @@
 import { useMemo } from 'react';
 import type { CompanyInput, Metric, Health, CompanyField } from '../lib/analysis';
 import { MissingData } from '../components/MissingData';
-import { profitability, liquidity, leverage, efficiency, missingFields } from '../lib/analysis';
+import { profitability, liquidity, leverage, efficiency, missingFields, reconcile, applyReconciliation } from '../lib/analysis';
+import { ReconNotice } from '../components/ReconNotice';
 import { runDcf } from '../lib/dcf';
 import { Card } from '../components/Card';
 import './SummaryTab.css';
@@ -31,11 +32,17 @@ const VALUE_REQUIRES: readonly CompanyField[] = [
 
 export function SummaryTab({ input }: { input: CompanyInput }) {
   const missingValue = missingFields(input, VALUE_REQUIRES);
+  const issues = useMemo(() => reconcile(input), [input]);
   const all = useMemo(
-    () => [...profitability(input), ...liquidity(input), ...leverage(input), ...efficiency(input)],
-    [input]
+    () => applyReconciliation(
+      [...profitability(input), ...liquidity(input), ...leverage(input), ...efficiency(input)],
+      issues
+    ),
+    [input, issues]
   );
-  const quality = overall(all);
+  const rated = all.filter((m) => m.health !== null);
+  const quality = overall(rated);
+  const hasError = issues.some((i) => i.severity === 'error');
 
   // Computed unconditionally to keep hook order stable; never rendered
   // when `missingValue` is non-empty.
@@ -60,7 +67,22 @@ export function SummaryTab({ input }: { input: CompanyInput }) {
   if (missingValue.length > 0) {
     return (
       <div className="summary">
+        {issues.length > 0 && <ReconNotice issues={issues} />}
         <MissingData what="the combined verdict" fields={missingValue} />
+      </div>
+    );
+  }
+
+  // Quality is half the verdict. If the ratios behind it rest on figures
+  // that contradict each other, there is no honest combined call to make.
+  if (hasError || rated.length < 4) {
+    return (
+      <div className="summary">
+        <ReconNotice issues={issues} />
+        <MissingData
+          what="the combined verdict"
+          fields={issues.flatMap((i) => (i.severity === 'error' ? i.fields : []))}
+        />
       </div>
     );
   }

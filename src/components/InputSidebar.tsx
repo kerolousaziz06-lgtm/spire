@@ -7,7 +7,7 @@
 // give the analysis room. One shared input feeds every tab.
 // ============================================================
 import { useState } from 'react';
-import { FIELD_HINTS, FIELD_LABELS, OPTIONAL_FIELDS, type CompanyInput, type CompanyField } from '../lib/analysis';
+import { FIELD_HINTS, FIELD_LABELS, OPTIONAL_FIELDS, reconcile, type CompanyInput, type CompanyField } from '../lib/analysis';
 import './InputSidebar.css';
 
 type Props = {
@@ -48,6 +48,20 @@ const GROUPS: { title: string; fields: CompanyField[] }[] = [
 
 export function InputSidebar({ input, onChange, onReset, collapsed, onToggle }: Props) {
   const [group, setGroup] = useState(0); // which statement group is open
+
+  // Which fields take part in a failed check, and the first message for
+  // each. Shown inline so the user is sent to the number to fix rather
+  // than left to work it out from a summary elsewhere.
+  const flagged = new Map<CompanyField, { severity: 'error' | 'caution'; message: string }>();
+  for (const issue of reconcile(input)) {
+    for (const f of issue.fields) {
+      const existing = flagged.get(f);
+      // An error outranks a caution on the same field.
+      if (!existing || (existing.severity === 'caution' && issue.severity === 'error')) {
+        flagged.set(f, { severity: issue.severity, message: issue.message });
+      }
+    }
+  }
 
   // A cleared field becomes null, NOT 0. Coercing to 0 used to make
   // "I haven't found this yet" indistinguishable from "this is genuinely
@@ -98,6 +112,7 @@ export function InputSidebar({ input, onChange, onReset, collapsed, onToggle }: 
         {GROUPS[group].fields.map((key) => {
           const optional = OPTIONAL_FIELDS.has(key);
           const blank = input[key] === null;
+          const flag = flagged.get(key);
           return (
             <label className="isb-field" key={key}>
               <span className="isb-label">
@@ -105,7 +120,7 @@ export function InputSidebar({ input, onChange, onReset, collapsed, onToggle }: 
                 {optional && <span className="isb-optional">optional</span>}
               </span>
               <input
-                className={`isb-input tabular ${blank && !optional ? 'is-blank' : ''}`}
+                className={`isb-input tabular ${blank && !optional ? 'is-blank' : ''} ${flag ? 'is-' + flag.severity : ''}`}
                 type="number"
                 value={input[key] ?? ''}
                 onChange={(e) => setField(key, e.target.value)}
@@ -115,7 +130,9 @@ export function InputSidebar({ input, onChange, onReset, collapsed, onToggle }: 
               />
               {/* Where to find it on a filing. Several of these are not
                   single line items, which was the slowest part of entry. */}
-              <span className="isb-hint" id={`hint-${key}`}>{FIELD_HINTS[key]}</span>
+              {flag
+                ? <span className={`isb-flag isb-flag--${flag.severity}`} role="alert">{flag.message}</span>
+                : <span className="isb-hint" id={`hint-${key}`}>{FIELD_HINTS[key]}</span>}
             </label>
           );
         })}

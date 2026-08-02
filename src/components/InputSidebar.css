@@ -144,3 +144,18 @@
   color: var(--text-muted);
   opacity: 0.7;
 }
+
+/* A field caught by a reconciliation check. The message replaces the hint
+   rather than stacking below it: the sidebar is narrow, and the problem
+   is more urgent than where to find the figure. */
+.isb-flag {
+  display: block;
+  margin-top: 4px;
+  font-size: 10.5px;
+  line-height: 1.45;
+  max-width: 34ch;
+}
+.isb-flag--error { color: var(--loss); }
+.isb-flag--caution { color: var(--warn); }
+.isb-input.is-error { border-color: var(--loss); }
+.isb-input.is-caution { border-color: var(--warn); }

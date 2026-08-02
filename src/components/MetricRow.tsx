@@ -17,7 +17,9 @@ export function MetricRow({ metric }: { metric: Metric }) {
         <span className="mr-label">{metric.label}</span>
         <div className="mr-right">
           <span className="mr-value tabular">{metric.display}</span>
-          <span className={`mr-pill mr-pill--${metric.health}`}>{metric.verdict}</span>
+          {/* health === null means the figures it came from failed a
+              reconciliation check. Show the value, withhold the judgement. */}
+          <span className={`mr-pill mr-pill--${metric.health ?? 'unrated'}`}>{metric.verdict}</span>
         </div>
       </div>
       <p className="mr-meaning">{metric.meaning}</p>

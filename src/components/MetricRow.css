@@ -33,3 +33,11 @@
   line-height: 1.5;
   max-width: 60ch;
 }
+
+/* Withheld verdict: the value is still shown, but rating it would mean
+   putting a confident judgement on figures that cannot be right. */
+.mr-pill--unrated {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px dashed var(--border-strong);
+}
