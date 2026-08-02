@@ -17,6 +17,8 @@ import { ValuationTab } from './ValuationTab';
 import { SummaryTab } from './SummaryTab';
 import { LboTab } from './LboTab';
 import { type CompanyInput } from '../lib/analysis';
+import { PresetBar } from '../components/PresetBar';
+import type { CompanyPreset } from '../lib/presets';
 import './Vantage.css';
 
 type Tab = 'health' | 'valuation' | 'lbo' | 'summary';
@@ -32,9 +34,18 @@ type Props = {
   input: CompanyInput;
   onInput: (next: CompanyInput) => void;
   onResetInput: () => void;
+  // Saved companies live in App with the rest of the user's data, so they
+  // survive navigating away from this module.
+  presets: CompanyPreset[];
+  onSavePreset: (name: string) => void;
+  onDeletePreset: (id: string) => void;
+  onRenamePreset: (id: string, name: string) => void;
 };
 
-export function Vantage({ input, onInput, onResetInput }: Props) {
+export function Vantage({
+  input, onInput, onResetInput,
+  presets, onSavePreset, onDeletePreset, onRenamePreset,
+}: Props) {
   const [tab, setTab] = useState<Tab>('health');
   const [collapsed, setCollapsed] = useState(false);
 
@@ -54,6 +65,14 @@ export function Vantage({ input, onInput, onResetInput }: Props) {
             <h1 className="vantage-title">Vantage</h1>
             <p className="vantage-subtitle">Company fundamentals & valuation — from the statements up</p>
           </div>
+          <PresetBar
+            presets={presets}
+            input={input}
+            onLoad={(p) => onInput(p.input)}
+            onSave={onSavePreset}
+            onDelete={onDeletePreset}
+            onRename={onRenamePreset}
+          />
         </header>
 
         {/* tab bar */}

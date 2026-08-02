@@ -28,6 +28,10 @@ import { DEFAULT_SETTINGS, reviveSettings, type Settings as SettingsType } from 
 import { setDisplaySettings } from './lib/format';
 import { ASSET_BY_ID, type Holding } from './lib/assets';
 import { SAMPLE_INPUT, type CompanyInput } from './lib/analysis';
+import {
+  savePreset, deletePreset, renamePreset, makePresetsReviver,
+  type CompanyPreset,
+} from './lib/presets';
 import './App.css';
 
 // The portfolio the app starts with, and returns to on reset.
@@ -51,6 +55,15 @@ export default function App() {
     STORAGE_KEYS.company,
     SAMPLE_INPUT,
     reviveNumericRecord
+  );
+
+  // Saved companies. Each stored input is run through the SAME numeric
+  // reviver the live figures use, so a corrupt preset is dropped rather
+  // than loaded into the engines.
+  const [presets, setPresets, resetPresets] = usePersistedState<CompanyPreset[]>(
+    STORAGE_KEYS.presets,
+    [],
+    makePresetsReviver(reviveNumericRecord, SAMPLE_INPUT)
   );
 
   const [settings, setSettings, resetSettings] = usePersistedState<SettingsType>(
@@ -81,6 +94,7 @@ export default function App() {
     resetHoldings();
     resetCompany();
     resetSettings();
+    resetPresets();
   }
 
   function renderModule() {
@@ -91,6 +105,10 @@ export default function App() {
             input={company}
             onInput={setCompany}
             onResetInput={resetCompany}
+            presets={presets}
+            onSavePreset={(name) => setPresets(savePreset(presets, name, company))}
+            onDeletePreset={(id) => setPresets(deletePreset(presets, id))}
+            onRenamePreset={(id, name) => setPresets(renamePreset(presets, id, name))}
           />
         );
       case 'settings':

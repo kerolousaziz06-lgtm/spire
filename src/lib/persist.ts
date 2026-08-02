@@ -26,6 +26,7 @@ export const STORAGE_KEYS = {
   portfolio: `${PREFIX}:montevue.portfolio`,
   company: `${PREFIX}:vantage.company`,
   settings: `${PREFIX}:settings`,
+  presets: `${PREFIX}:vantage.presets`,
 } as const;
 
 type Envelope = { version: number; data: unknown };
