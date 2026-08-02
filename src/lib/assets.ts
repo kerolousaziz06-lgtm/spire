@@ -49,6 +49,23 @@ export const ASSETS: Asset[] = [
 export const ASSET_BY_ID: Record<string, Asset> =
   Object.fromEntries(ASSETS.map((a) => [a.id, a]));
 
+// The two numbers a user is allowed to disagree with. The values above are
+// long-run historical approximations, not facts, so Settings can override
+// them per asset. Everything that reads an expected return or a volatility
+// must go through statsFor(), or an override will apply in one engine and
+// not another - the same class of bug as the correlation heatmap showing
+// raw values while the simulation used repaired ones.
+export type AssetStats = { expReturn: number; volatility: number };
+export type AssetOverrides = Record<string, Partial<AssetStats>>;
+
+export function statsFor(asset: Asset, overrides?: AssetOverrides): AssetStats {
+  const o = overrides?.[asset.id];
+  return {
+    expReturn: o?.expReturn ?? asset.expReturn,
+    volatility: o?.volatility ?? asset.volatility,
+  };
+}
+
 // ---- Correlation via category + tweaks -------------------------
 // Hand-maintaining a full NxN matrix gets error-prone as assets
 // grow. Instead we derive correlation from broad CATEGORY behavior,

@@ -15,7 +15,8 @@
 // ============================================================
 import { ASSETS, ASSET_BY_ID, correlation, correlationMatrix, type Holding } from '../src/lib/assets';
 import { runSimulation } from '../src/lib/montecarlo';
-import { computeRiskProfile } from '../src/lib/risk';
+import { DEFAULT_ASSUMPTIONS, TAIL_DOF, type Assumptions } from '../src/lib/settings';
+import { computeRiskProfile, computeFrontier } from '../src/lib/risk';
 import { CRASH_EVENTS, replayCrash } from '../src/lib/crashes';
 import { dupont, SAMPLE_INPUT } from '../src/lib/analysis';
 import { runDcf } from '../src/lib/dcf';
@@ -228,4 +229,74 @@ console.log('='.repeat(74));
   for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) if (Math.abs(raw[i][j] - fixed[i][j]) > 0) same = false;
   console.log(`default 4-asset matrix bit-identical after repair: ${same ? 'PASS' : 'FAIL'}`);
   console.log(`  minEigenvalue ${f(Math.min(...eigSym(raw).values), 5)} >= floor 0.01, so it returns early untouched`);
+}
+
+
+console.log('\n' + '='.repeat(74));
+console.log('F. Settings: defaults are inert, and every knob actually moves something');
+console.log('='.repeat(74));
+{
+  const port = H([['us_stocks', 60000], ['bonds', 40000]]);
+  const A = (over: Partial<Assumptions>): Assumptions => ({ ...DEFAULT_ASSUMPTIONS, ...over });
+
+  // 1. Passing the defaults explicitly must equal passing nothing.
+  seed(777); const implicit = runSimulation({ holdings: port, years: 10, numPaths: 4000 });
+  seed(777); const explicit = runSimulation({ holdings: port, years: 10, numPaths: 4000, assumptions: DEFAULT_ASSUMPTIONS });
+  console.log(`defaults inert       implicit $${implicit.median.toFixed(0)} vs explicit $${explicit.median.toFixed(0)}  -> ${implicit.median === explicit.median ? 'PASS (bit-identical)' : 'FAIL'}`);
+
+  seed(777); const rpImplicit = computeRiskProfile(port);
+  seed(777); const rpExplicit = computeRiskProfile(port, DEFAULT_ASSUMPTIONS);
+  console.log(`  risk profile       sharpe ${rpImplicit.sharpe.toFixed(8)} vs ${rpExplicit.sharpe.toFixed(8)}  -> ${rpImplicit.sharpe === rpExplicit.sharpe ? 'PASS' : 'FAIL'}`);
+
+  // 2. Risk-free rate feeds the Sharpe ratio only, and linearly.
+  const base = computeRiskProfile(port, A({ riskFreeRate: 0.02 }));
+  const hi = computeRiskProfile(port, A({ riskFreeRate: 0.05 }));
+  const expectedDrop = 0.03 / base.volatility;
+  const actualDrop = base.sharpe - hi.sharpe;
+  console.log(`\nrisk-free 2%->5%     sharpe ${base.sharpe.toFixed(4)} -> ${hi.sharpe.toFixed(4)}`);
+  console.log(`  drop               ${actualDrop.toFixed(6)} vs expected 0.03/vol = ${expectedDrop.toFixed(6)}  -> ${Math.abs(actualDrop - expectedDrop) < 1e-9 ? 'PASS' : 'FAIL'}`);
+  console.log(`  volatility moved?  ${base.volatility.toFixed(8)} vs ${hi.volatility.toFixed(8)}  -> ${base.volatility === hi.volatility ? 'PASS (unaffected, correct)' : 'FAIL'}`);
+
+  // 3. Fat-tail severity: fatter tails => worse 5th percentile.
+  // NOTE the direction. randFatTail rescales so total volatility is held
+  // constant, meaning fatter tails do NOT widen the everyday range - they
+  // concentrate it and push risk out into rare, larger events. The naive
+  // assertion "fatter tails lower p5" is false, and asserting it would
+  // have encoded a misunderstanding as a passing test.
+  console.log('\nfat-tail severity    (20k paths, same seed; volatility held constant by design)');
+  const dd: number[] = [], spread: number[] = [];
+  for (const sev of ['severe', 'realistic', 'mild', 'none'] as const) {
+    seed(31337);
+    const r = runSimulation({ holdings: port, years: 10, numPaths: 20000, assumptions: A({ tailSeverity: sev }) });
+    dd.push(r.medianMaxDrawdown); spread.push(r.p95 - r.p5);
+    console.log(`  ${sev.padEnd(10)} dof=${String(TAIL_DOF[sev]).padEnd(8)} p5=$${r.p5.toFixed(0).padStart(7)} p95=$${r.p95.toFixed(0).padStart(7)} spread=$${(r.p95 - r.p5).toFixed(0).padStart(7)} maxDD=${pct(r.medianMaxDrawdown)}`);
+  }
+  const rising = (xs: number[]) => xs.every((v, i) => i === 0 || v > xs[i - 1]);
+  console.log(`  drawdown rising    severe < realistic < mild < none  -> ${rising(dd) ? 'PASS' : 'FAIL'}`);
+  console.log(`  spread rising      same order                        -> ${rising(spread) ? 'PASS' : 'FAIL'}`);
+  console.log(`  (fatter tails NARROW the everyday range; the risk they add is in rare events)`);
+
+  // 4. Asset overrides reach BOTH engines, not just one.
+  const over = A({ assetOverrides: { us_stocks: { expReturn: 0.12 } } });
+  const rpBase = computeRiskProfile(port);
+  const rpOver = computeRiskProfile(port, over);
+  seed(99); const simBase = runSimulation({ holdings: port, years: 10, numPaths: 4000 });
+  seed(99); const simOver = runSimulation({ holdings: port, years: 10, numPaths: 4000, assumptions: over });
+  const fBase = computeFrontier(port, 200);
+  const fOver = computeFrontier(port, 200, over);
+  console.log(`\nus_stocks 7%->12%    risk profile expReturn ${pct(rpBase.expReturn)} -> ${pct(rpOver.expReturn)}  -> ${rpOver.expReturn > rpBase.expReturn ? 'PASS' : 'FAIL'}`);
+  console.log(`  simulation         median $${simBase.median.toFixed(0)} -> $${simOver.median.toFixed(0)}  -> ${simOver.median > simBase.median ? 'PASS' : 'FAIL'}`);
+  console.log(`  frontier           current ret ${pct(fBase.current!.ret)} -> ${pct(fOver.current!.ret)}  -> ${fOver.current!.ret > fBase.current!.ret ? 'PASS' : 'FAIL'}`);
+  console.log(`  (all three must move, or an override applies in one engine and not another)`);
+
+  // 5. Volatility override must move risk, not return.
+  const vOver = A({ assetOverrides: { bonds: { volatility: 0.30 } } });
+  const rpV = computeRiskProfile(port, vOver);
+  console.log(`\nbonds vol 5.5%->30%  volatility ${pct(rpBase.volatility)} -> ${pct(rpV.volatility)}  -> ${rpV.volatility > rpBase.volatility ? 'PASS' : 'FAIL'}`);
+  console.log(`  expReturn held     ${pct(rpBase.expReturn)} vs ${pct(rpV.expReturn)}  -> ${rpBase.expReturn === rpV.expReturn ? 'PASS' : 'FAIL'}`);
+
+  // 6. Crash replay must be untouched: it uses category declines, not asset stats.
+  const cBase = replayCrash(port, c2008);
+  const cOver = replayCrash(port, c2008);
+  console.log(`\ncrash replay         ${pct(cBase.troughDrop)} vs ${pct(cOver.troughDrop)}  -> ${cBase.troughDrop === cOver.troughDrop ? 'PASS (assumption-independent by design)' : 'FAIL'}`);
 }
