@@ -21,6 +21,7 @@ import { CRASH_EVENTS, replayCrash } from '../src/lib/crashes';
 import { dupont, SAMPLE_INPUT } from '../src/lib/analysis';
 import { runDcf } from '../src/lib/dcf';
 import { runLbo, SAMPLE_LBO } from '../src/lib/lbo';
+import { runMna, type MnaCompany, type MnaDeal } from '../src/lib/mna';
 
 function mulberry32(a: number) {
   return function () {
@@ -299,4 +300,112 @@ console.log('='.repeat(74));
   const cBase = replayCrash(port, c2008);
   const cOver = replayCrash(port, c2008);
   console.log(`\ncrash replay         ${pct(cBase.troughDrop)} vs ${pct(cOver.troughDrop)}  -> ${cBase.troughDrop === cOver.troughDrop ? 'PASS (assumption-independent by design)' : 'FAIL'}`);
+}
+
+
+console.log('\n' + '='.repeat(74));
+console.log('G. M&A accretion/dilution, against a hand-computed case');
+console.log('='.repeat(74));
+{
+  // Chosen so every step is checkable on paper.
+  const acquirer: MnaCompany = { netIncome: 500, sharesOutstanding: 100, sharePrice: 50 };
+  const target:   MnaCompany = { netIncome: 100, sharesOutstanding:  50, sharePrice: 20 };
+  const deal: MnaDeal = {
+    offerPricePerShare: 25,
+    pctStock: 0.5, pctCash: 0.3, pctDebt: 0.2,
+    debtRate: 0.06, cashRate: 0.02, taxRate: 0.25, synergies: 0,
+  };
+  const r = runMna(acquirer, target, deal);
+
+  // ---- worked by hand ----
+  //   acquirer EPS = 500/100                = 5.00
+  //   target EPS   = 100/50                 = 2.00
+  //   offer value  = 50 x 25                = 1250
+  //   premium      = 25/20 - 1              = 25%
+  //   stock 50%    = 625 -> 625/50          = 12.5 new shares
+  //   cash  30%    = 375 -> x2%             = 7.5 forgone interest
+  //   debt  20%    = 250 -> x6%             = 15.0 new interest
+  //   pro-forma NI = 500 + 100 - (15 + 7.5) x 0.75 = 583.125
+  //   pro-forma sh = 100 + 12.5             = 112.5
+  //   pro-forma EPS= 583.125 / 112.5        = 5.183333...
+  //   accretion    = 5.183333/5 - 1         = +3.6667%
+  const expect: [string, number, number][] = [
+    ['acquirer EPS',      r.acquirerEps,        5],
+    ['target EPS',        r.targetEps,          2],
+    ['offer value',       r.offerValue,         1250],
+    ['premium',           r.premium,            0.25],
+    ['stock consideration', r.stockConsideration, 625],
+    ['new shares issued', r.newSharesIssued,    12.5],
+    ['forgone interest',  r.forgoneInterest,    7.5],
+    ['new interest',      r.newInterest,        15],
+    ['pro-forma NI',      r.proFormaNetIncome,  583.125],
+    ['pro-forma shares',  r.proFormaShares,     112.5],
+    ['pro-forma EPS',     r.proFormaEps,        583.125 / 112.5],
+    ['accretion',         r.accretion!,         583.125 / 112.5 / 5 - 1],
+  ];
+  let allOk = true;
+  for (const [label, got, want] of expect) {
+    const ok = Math.abs(got - want) < 1e-9;
+    if (!ok) allOk = false;
+    console.log(`  ${label.padEnd(20)} ${f(got, 6).padStart(12)}  hand: ${f(want, 6).padStart(12)}  ${ok ? 'PASS' : 'FAIL'}`);
+  }
+  console.log(`  verdict              ${r.verdict}  (${pct(r.accretion!)})`);
+  console.log(`  ALL HAND-CHECKS      ${allOk ? 'PASS' : 'FAIL'}`);
+
+  // The bridge must reconcile to the actual EPS change, or the
+  // attribution is decoration rather than an explanation.
+  const bridgeSum = r.bridge.targetEarnings + r.bridge.synergies + r.bridge.financingCost + r.bridge.dilutionFromShares;
+  const epsChange = r.proFormaEps - r.acquirerEps;
+  console.log(`\n  bridge sums to change ${f(bridgeSum, 8)} vs ${f(epsChange, 8)}  -> ${Math.abs(bridgeSum - epsChange) < 1e-9 ? 'PASS' : 'FAIL'}`);
+
+  // ---- breakeven offer price, worked by hand ----
+  //   V* = targetNI / (acquirerEps*m + k)
+  //   m = 0.5/50 = 0.01 ; k = (0.06*0.2 + 0.02*0.3)*0.75 = 0.0135
+  //   V* = 100 / (0.05 + 0.0135) = 1574.8031...
+  //   P* = V*/50 = 31.4961...
+  const handBreakeven = (100 / (5 * 0.01 + 0.0135)) / 50;
+  console.log(`  breakeven price      ${f(r.breakevenOfferPrice!, 6)}  hand: ${f(handBreakeven, 6)}  -> ${Math.abs(r.breakevenOfferPrice! - handBreakeven) < 1e-9 ? 'PASS' : 'FAIL'}`);
+
+  // And it must actually be the zero: re-running AT that price gives ~0.
+  const atBreakeven = runMna(acquirer, target, { ...deal, offerPricePerShare: r.breakevenOfferPrice! });
+  console.log(`  re-run at breakeven  accretion ${f(atBreakeven.accretion! * 100, 8)}%  -> ${Math.abs(atBreakeven.accretion!) < 1e-12 ? 'PASS (it is the true zero)' : 'FAIL'}`);
+
+  // Breakeven synergies: negative here means already accretive with room.
+  const handSyn = 22.5 + (5 * 12.5 - 100) / 0.75;
+  console.log(`  breakeven synergies  ${f(r.breakevenSynergies!, 6)}  hand: ${f(handSyn, 6)}  -> ${Math.abs(r.breakevenSynergies! - handSyn) < 1e-9 ? 'PASS' : 'FAIL'}`);
+
+  // ---- the textbook rule: an ALL-STOCK deal is accretive iff the
+  // acquirer's P/E exceeds the target's P/E at the offer price ----
+  console.log('\n  all-stock P/E rule (acquirer P/E 10.0):');
+  for (const p of [15, 20, 25, 30]) {
+    const rr = runMna(acquirer, target, { ...deal, offerPricePerShare: p, pctStock: 1, pctCash: 0, pctDebt: 0 });
+    const rulePredicts = (rr.acquirerPe ?? 0) > (rr.targetPeAtOffer ?? 0) ? 'accretive' : 'dilutive';
+    const agrees = rr.verdict === rulePredicts || rr.verdict === 'neutral';
+    console.log(`    offer $${String(p).padEnd(3)} target P/E ${f(rr.targetPeAtOffer!, 1).padStart(5)}  ${String(rr.verdict).padEnd(10)} rule says ${rulePredicts.padEnd(10)} ${agrees ? 'PASS' : 'FAIL'}`);
+  }
+
+  // ---- guard: no positive standalone EPS means no comparison ----
+  const broke = runMna({ netIncome: 0, sharesOutstanding: 100, sharePrice: 50 }, target, deal);
+  console.log(`\n  acquirer EPS = 0     accretion=${broke.accretion} verdict=${broke.verdict}  -> ${broke.accretion === null && broke.verdict === null ? 'PASS (withheld, not faked)' : 'FAIL'}`);
+}
+
+console.log('\n  deal sanity:');
+{
+  const A: MnaCompany = { netIncome: 500, sharesOutstanding: 100, sharePrice: 50 };
+  const T: MnaCompany = { netIncome: 100, sharesOutstanding: 50, sharePrice: 230 };
+  const D: MnaDeal = { offerPricePerShare: 60, pctStock: 0.5, pctCash: 0.3, pctDebt: 0.2,
+    debtRate: 0.06, cashRate: 0.02, taxRate: 0.25, synergies: 0 };
+  const under = runMna(A, T, D);
+  console.log(`    offer 60 vs price 230  premium ${pct(under.premium)}  issues=${under.issues.map(i=>i.id).join(',')}  verdict=${under.verdict}`);
+  console.log(`      flagged as caution   ${under.issues.some(i=>i.id==='discount')?'PASS':'FAIL'}  (a take-under is possible, so it warns rather than blocks)`);
+
+  const badMix = runMna(A, { ...T, sharePrice: 20 }, { ...D, offerPricePerShare: 25, pctStock: 0.5, pctCash: 0.3, pctDebt: 0.9 });
+  console.log(`    mix sums to 170%       issues=${badMix.issues.map(i=>i.id).join(',')}  verdict=${badMix.verdict}  accretion=${badMix.accretion}`);
+  console.log(`      verdict withheld     ${badMix.verdict === null && badMix.accretion === null ? 'PASS' : 'FAIL'}`);
+
+  const noShares = runMna(A, { ...T, sharesOutstanding: 0, sharePrice: 20 }, { ...D, offerPricePerShare: 25 });
+  console.log(`    target has 0 shares    issues=${noShares.issues.map(i=>i.id).join(',')}  verdict withheld ${noShares.verdict === null ? 'PASS' : 'FAIL'}`);
+
+  const clean = runMna(A, { ...T, sharePrice: 20 }, { ...D, offerPricePerShare: 25 });
+  console.log(`    the hand-checked deal  issues=${clean.issues.length}  ${clean.issues.length === 0 ? 'PASS (no false positives)' : 'FAIL'}`);
 }

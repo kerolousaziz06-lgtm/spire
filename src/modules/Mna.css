@@ -1,0 +1,171 @@
+.mna { display: flex; flex-direction: column; }
+
+.mna-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-areas:
+    "acquirer target"
+    "deal     result";
+  gap: var(--grid-gap);
+  flex: 1; min-height: 0;
+  grid-template-rows: minmax(min-content, auto) minmax(min-content, 1fr);
+  overflow-y: auto;
+}
+.mna-side:nth-of-type(1) { grid-area: acquirer; }
+.mna-side:nth-of-type(2) { grid-area: target; }
+.mna-deal { grid-area: deal; }
+.mna-result { grid-area: result; }
+
+/* ---- a company ---- */
+.mna-side-head { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--s3); }
+.mna-role {
+  font-family: var(--font-mono); font-size: var(--fs-xs);
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted);
+}
+.mna-label {
+  background: transparent; border: none; border-bottom: 1px solid transparent;
+  color: var(--text-primary); font-size: var(--fs-lg); font-weight: 600;
+  padding: 2px 0; width: 100%;
+}
+.mna-label:hover { border-bottom-color: var(--border); }
+.mna-label:focus-visible { outline: none; border-bottom-color: var(--accent); }
+
+.mna-source { position: relative; flex-shrink: 0; }
+.mna-source-btn {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--text-secondary);
+  background: transparent; border: 1px solid var(--border);
+  border-radius: var(--r-sm); padding: 6px 10px; cursor: pointer; white-space: nowrap;
+}
+.mna-source-btn:hover { color: var(--text-primary); border-color: var(--border-strong); }
+.mna-source-menu {
+  position: absolute; right: 0; top: calc(100% + 4px); z-index: 20;
+  min-width: 230px; max-height: 320px; overflow-y: auto;
+  background: var(--bg-card); border: 1px solid var(--border-strong);
+  border-radius: var(--r-md); padding: 4px; display: flex; flex-direction: column; gap: 1px;
+}
+.mna-source-item {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 1px;
+  text-align: left; background: transparent; border: none; cursor: pointer;
+  border-radius: var(--r-sm); padding: 8px 10px;
+  color: var(--text-primary); font-size: var(--fs-sm);
+}
+.mna-source-item:hover:not(:disabled) { background: var(--bg-card-hover); }
+.mna-source-item:disabled { color: var(--text-muted); cursor: not-allowed; }
+/* Say why an option is unavailable rather than leaving it dead. */
+.mna-source-why { font-size: 9.5px; color: var(--text-muted); }
+.mna-source-empty { font-size: 10.5px; color: var(--text-muted); padding: 8px 10px; }
+
+.mna-fields { display: flex; gap: var(--s3); margin-top: var(--stack-gap); }
+.mna-field { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
+.mna-field-label {
+  font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--text-muted);
+}
+.mna-field-note { font-size: 10px; color: var(--text-muted); line-height: 1.4; }
+.mna-num {
+  width: 100%; background: var(--bg-panel); border: 1px solid var(--border);
+  border-radius: var(--r-sm); padding: 7px 9px;
+  color: var(--text-primary); font-size: var(--fs-sm);
+}
+.mna-num:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.mna-pct { display: flex; align-items: center; gap: 4px; }
+.mna-pct-sign { color: var(--text-muted); font-size: var(--fs-sm); }
+
+.mna-derived {
+  display: flex; gap: var(--s5); margin-top: var(--stack-gap);
+  padding-top: var(--stack-gap); border-top: 1px solid var(--border);
+  font-size: var(--fs-xs); color: var(--text-muted);
+}
+.mna-derived strong { color: var(--text-primary); margin-left: 4px; font-size: var(--fs-sm); }
+
+/* ---- deal ---- */
+.mna-mix { margin-top: var(--s4); padding-top: var(--s4); border-top: 1px solid var(--border); }
+.mna-mix-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--text-muted); margin-bottom: var(--s3);
+}
+.mna-mix-total { color: var(--text-primary); }
+.mna-mixrow {
+  display: grid; grid-template-columns: 52px 1fr 44px 90px;
+  align-items: center; gap: var(--s3); padding: 3px 0;
+  font-size: var(--fs-sm); color: var(--text-secondary);
+}
+/* Debt is the remainder, so it is shown but not driven. */
+.mna-mixrow.is-derived { color: var(--text-muted); }
+.mna-mixrange { accent-color: var(--accent); }
+.mna-mixrow-pct, .mna-mixrow-amt { text-align: right; color: var(--text-primary); }
+.mna-mixrow.is-derived .mna-mixrow-pct,
+.mna-mixrow.is-derived .mna-mixrow-amt { color: var(--text-muted); }
+
+.mna-rates {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--s4);
+  margin-top: var(--s4); padding-top: var(--s4); border-top: 1px solid var(--border);
+}
+
+/* ---- result ---- */
+.mna-verdict {
+  display: flex; align-items: baseline; gap: var(--s3);
+  font-size: var(--fs-2xl); font-weight: 700;
+}
+.mna-verdict--accretive { color: var(--gain); }
+.mna-verdict--dilutive { color: var(--loss); }
+.mna-verdict--neutral { color: var(--warn); }
+.mna-verdict-num { font-size: var(--fs-xl); }
+.mna-verdict-sub {
+  margin-top: var(--s2); font-size: var(--fs-sm);
+  color: var(--text-secondary); line-height: 1.55; max-width: 70ch;
+}
+.mna-verdict-sub strong { color: var(--text-primary); }
+
+.mna-bridge { margin-top: var(--s4); padding-top: var(--s4); border-top: 1px solid var(--border); }
+.mna-bridge-head {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--text-muted); margin-bottom: var(--s2);
+}
+.mna-bridgerow {
+  display: flex; justify-content: space-between; align-items: baseline;
+  padding: 5px 0; font-size: var(--fs-sm); color: var(--text-secondary);
+}
+.mna-bridgerow.is-total {
+  border-top: 1px solid var(--border); margin-top: 4px; padding-top: 8px;
+  color: var(--text-primary); font-weight: 600;
+}
+/* Direction is carried by an arrow as well as colour. */
+.mna-bridgeval--up { color: var(--gain); }
+.mna-bridgeval--down { color: var(--loss); }
+.mna-bridgeval--flat { color: var(--text-muted); }
+
+.mna-breakevens {
+  display: grid; grid-template-columns: 1fr 1fr; gap: var(--s4);
+  margin-top: var(--s4); padding-top: var(--s4); border-top: 1px solid var(--border);
+}
+.mna-breakeven-label {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--text-muted);
+}
+.mna-breakeven-value { font-size: var(--fs-xl); font-weight: 600; color: var(--text-primary); margin: 2px 0; }
+.mna-breakeven-note { font-size: 10.5px; color: var(--text-muted); line-height: 1.5; }
+
+@media (max-width: 1100px) {
+  .mna-grid { grid-template-columns: 1fr; grid-template-areas: "acquirer" "target" "deal" "result"; }
+  .mna-rates, .mna-breakevens { grid-template-columns: 1fr; }
+}
+
+/* Structural problems with the deal. An error withholds the verdict; a
+   caution is shown alongside it. */
+.mna-issues {
+  border: 1px solid var(--border-strong); border-left-width: 3px;
+  border-radius: var(--r-md); padding: var(--card-pad); margin-bottom: var(--s4);
+}
+.mna-issues.is-error { border-left-color: var(--loss); }
+.mna-issues.is-caution { border-left-color: var(--warn); }
+.mna-issues-head {
+  font-family: var(--font-mono); font-size: var(--fs-xs);
+  letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: var(--s2);
+}
+.mna-issues.is-error .mna-issues-head { color: var(--loss); }
+.mna-issues.is-caution .mna-issues-head { color: var(--warn); }
+.mna-issues ul { list-style: none; padding: 0; display: flex; flex-direction: column; gap: var(--s2); }
+.mna-issues li { font-size: var(--fs-sm); line-height: 1.5; color: var(--text-secondary); max-width: 74ch; }

@@ -27,6 +27,7 @@ export const STORAGE_KEYS = {
   company: `${PREFIX}:vantage.company`,
   settings: `${PREFIX}:settings`,
   presets: `${PREFIX}:vantage.presets`,
+  mna: `${PREFIX}:mna.deal`,
 } as const;
 
 type Envelope = { version: number; data: unknown };

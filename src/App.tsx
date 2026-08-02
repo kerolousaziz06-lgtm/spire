@@ -17,6 +17,7 @@ import { StressTest } from './modules/StressTest';
 import { Vantage } from './modules/Vantage';
 import { Landing } from './modules/Landing';
 import { Settings } from './modules/Settings';
+import { Mna, DEFAULT_MNA, type MnaState } from './modules/Mna';
 import { usePersistedState } from './lib/hooks';
 import {
   STORAGE_KEYS,
@@ -66,6 +67,29 @@ export default function App() {
     makePresetsReviver(reviveNumericRecord, SAMPLE_INPUT)
   );
 
+  // The deal. Revived shallowly: every field is a plain number, so the
+  // shape check is "are the three blocks present with finite numbers".
+  const [mna, setMna, resetMna] = usePersistedState<MnaState>(
+    STORAGE_KEYS.mna,
+    DEFAULT_MNA,
+    (raw, fallback) => {
+      if (!raw || typeof raw !== 'object') return null;
+      const r = raw as MnaState;
+      const okSide = (s: unknown) => {
+        if (!s || typeof s !== 'object') return false;
+        const c = (s as MnaState['acquirer']).company;
+        return !!c && ['netIncome', 'sharesOutstanding', 'sharePrice']
+          .every((k) => Number.isFinite((c as Record<string, number>)[k]));
+      };
+      if (!okSide(r.acquirer) || !okSide(r.target) || !r.deal) return null;
+      const d = r.deal;
+      const numeric = ['offerPricePerShare', 'pctStock', 'pctCash', 'pctDebt',
+        'debtRate', 'cashRate', 'taxRate', 'synergies'] as const;
+      if (!numeric.every((k) => Number.isFinite(d[k]))) return null;
+      return { ...fallback, ...r };
+    }
+  );
+
   const [settings, setSettings, resetSettings] = usePersistedState<SettingsType>(
     STORAGE_KEYS.settings,
     DEFAULT_SETTINGS,
@@ -95,6 +119,7 @@ export default function App() {
     resetCompany();
     resetSettings();
     resetPresets();
+    resetMna();
   }
 
   function renderModule() {
@@ -109,6 +134,16 @@ export default function App() {
             onSavePreset={(name) => setPresets(savePreset(presets, name, company))}
             onDeletePreset={(id) => setPresets(deletePreset(presets, id))}
             onRenamePreset={(id, name) => setPresets(renamePreset(presets, id, name))}
+          />
+        );
+      case 'mna':
+        return (
+          <Mna
+            state={mna}
+            onState={setMna}
+            onReset={resetMna}
+            presets={presets}
+            currentCompany={company}
           />
         );
       case 'settings':
