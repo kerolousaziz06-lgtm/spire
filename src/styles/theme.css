@@ -76,12 +76,19 @@ body {
 /* Tabular figures wherever numbers appear — stops layout jitter */
 .tabular { font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
 
-/* Respect users who prefer less motion */
+/* Respect users who prefer less motion, and let Settings force it on for
+   anyone whose OS preference is off but who still wants it still. */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
+}
+body.reduce-motion *,
+body.reduce-motion *::before,
+body.reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  transition-duration: 0.01ms !important;
 }
 
 /* Scrollbars matching the dark theme */

@@ -27,6 +27,7 @@ import { runSimulation, type Holding } from '../lib/montecarlo';
 import { computeRiskProfile, computeFrontier } from '../lib/risk';
 import { CRASH_EVENTS, replayCrash } from '../lib/crashes';
 import { fmtMoney, fmtPctSigned, fmtPct } from '../lib/format';
+import { DEFAULT_ASSUMPTIONS, type Assumptions } from '../lib/settings';
 import './StressTest.css';
 
 
@@ -39,10 +40,13 @@ type Props = {
   holdings: Holding[];
   onHoldings: (next: Holding[]) => void;
   onResetHoldings: () => void;
+  // The engine assumptions from Settings. Threaded, never read from a
+  // global, so these functions stay pure and testable.
+  assumptions?: Assumptions;
 };
 
-export function StressTest({ holdings, onHoldings, onResetHoldings }: Props) {
-  const [numPaths, setNumPaths] = useState(5000);
+export function StressTest({ holdings, onHoldings, onResetHoldings, assumptions = DEFAULT_ASSUMPTIONS }: Props) {
+  const [numPaths, setNumPaths] = useState(assumptions.defaultNumPaths);
   const [editorOpen, setEditorOpen] = useState(false);
   const [years, setYears] = useState(DEFAULT_YEARS);
   // Which chart to show in the center: the forward forecast, or a
@@ -53,12 +57,12 @@ export function StressTest({ holdings, onHoldings, onResetHoldings }: Props) {
   // useMemo caches the result so re-renders (like hovering the chart)
   // don't needlessly re-simulate thousands of paths.
   const result = useMemo(
-    () => runSimulation({ holdings, years, numPaths }),
-    [holdings, years, numPaths]
+    () => runSimulation({ holdings, years, numPaths, assumptions }),
+    [holdings, years, numPaths, assumptions]
   );
 
   // Risk stats (volatility, max drawdown, Sharpe) from the same portfolio.
-  const risk = useMemo(() => computeRiskProfile(holdings), [holdings]);
+  const risk = useMemo(() => computeRiskProfile(holdings, assumptions), [holdings, assumptions]);
 
   // Deterministic crash replays — recomputed only when holdings change
   // (not random, so no need to depend on numPaths/years).
@@ -69,7 +73,7 @@ export function StressTest({ holdings, onHoldings, onResetHoldings }: Props) {
   const activeCrash = crashResults.find((c) => c.event.id === viewMode) ?? null;
 
   // Efficient frontier: cloud of random mixes + the current portfolio.
-  const frontier = useMemo(() => computeFrontier(holdings), [holdings]);
+  const frontier = useMemo(() => computeFrontier(holdings, 800, assumptions), [holdings, assumptions]);
 
   // Brief "just recomputed" pulse on the hero number. We bump a key
   // whenever the median changes; the animation replays via that key.

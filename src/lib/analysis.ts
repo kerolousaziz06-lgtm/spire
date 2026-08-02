@@ -1,3 +1,4 @@
+import { unitSuffix, currencySymbol } from './format';
 // ============================================================
 // analysis.ts — the Vantage fundamentals engine (pure math).
 //
@@ -148,7 +149,10 @@ export type Metric = {
 // Small helpers for formatting inside this file.
 const pct = (x: number) => (x * 100).toFixed(1) + '%';
 const mult = (x: number) => x.toFixed(2) + '\u00D7';   // ×
-const money = (x: number) => (x < 0 ? '-$' : '$') + Math.abs(x).toFixed(1) + 'B';
+// Follows the Display settings: the currency glyph and the unit suffix
+// are labels chosen by the user, never a conversion.
+const money = (x: number) =>
+  (x < 0 ? '-' : '') + currencySymbol() + Math.abs(x).toFixed(1) + unitSuffix();
 
 // Build a verdict from thresholds. `bands` is [goodAt, okAt] for
 // higher-is-better metrics, or [goodBelow, okBelow] when lower is better.

@@ -46,7 +46,12 @@ export function Sidebar({ active, onSelect, onHome }: SidebarProps) {
       </div>
 
       <div className="sidebar-footer">
-        <button className="nav-item" aria-label="Settings">
+        <button
+          className={`nav-item ${active === 'settings' ? 'is-active' : ''}`}
+          onClick={() => onSelect('settings')}
+          aria-label="Settings"
+          aria-current={active === 'settings' ? 'page' : undefined}
+        >
           <IconSettings size={20} />
           <span className="nav-tooltip">Settings</span>
         </button>

@@ -16,12 +16,16 @@ import { Sidebar } from './components/Sidebar';
 import { StressTest } from './modules/StressTest';
 import { Vantage } from './modules/Vantage';
 import { Landing } from './modules/Landing';
+import { Settings } from './modules/Settings';
 import { usePersistedState } from './lib/hooks';
 import {
   STORAGE_KEYS,
+  clearAllPersisted,
   reviveHoldings,
   reviveNumericRecord,
 } from './lib/persist';
+import { DEFAULT_SETTINGS, reviveSettings, type Settings as SettingsType } from './lib/settings';
+import { setDisplaySettings } from './lib/format';
 import { ASSET_BY_ID, type Holding } from './lib/assets';
 import { SAMPLE_INPUT, type CompanyInput } from './lib/analysis';
 import './App.css';
@@ -49,10 +53,35 @@ export default function App() {
     reviveNumericRecord
   );
 
+  const [settings, setSettings, resetSettings] = usePersistedState<SettingsType>(
+    STORAGE_KEYS.settings,
+    DEFAULT_SETTINGS,
+    reviveSettings
+  );
+
   useEffect(() => {
     document.body.classList.add('v2');
     return () => document.body.classList.remove('v2');
   }, []);
+
+  // Display settings are presentation-only, so format.ts holds them in a
+  // module-level slot rather than being threaded through every call site.
+  // Engine assumptions are threaded, because those CAN change a result.
+  useEffect(() => { setDisplaySettings(settings.display); }, [settings.display]);
+
+  useEffect(() => {
+    document.body.classList.toggle('reduce-motion', settings.display.reduceMotion);
+  }, [settings.display.reduceMotion]);
+
+  // Clearing everything has to reset the in-memory state too, or the app
+  // would keep showing data it has just deleted and write it back on the
+  // next edit.
+  function clearAllData() {
+    clearAllPersisted();
+    resetHoldings();
+    resetCompany();
+    resetSettings();
+  }
 
   function renderModule() {
     switch (activeModule) {
@@ -64,6 +93,15 @@ export default function App() {
             onResetInput={resetCompany}
           />
         );
+      case 'settings':
+        return (
+          <Settings
+            settings={settings}
+            onSettings={setSettings}
+            onResetSettings={resetSettings}
+            onClearAllData={clearAllData}
+          />
+        );
       case 'stress':
       default:
         return (
@@ -71,6 +109,7 @@ export default function App() {
             holdings={holdings}
             onHoldings={setHoldings}
             onResetHoldings={resetHoldings}
+            assumptions={settings.assumptions}
           />
         );
     }

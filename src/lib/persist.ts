@@ -25,6 +25,7 @@ const PREFIX = 'finance-suite';
 export const STORAGE_KEYS = {
   portfolio: `${PREFIX}:montevue.portfolio`,
   company: `${PREFIX}:vantage.company`,
+  settings: `${PREFIX}:settings`,
 } as const;
 
 type Envelope = { version: number; data: unknown };
@@ -86,6 +87,11 @@ export function savePersisted<T>(key: string, data: T): void {
     // Quota exceeded or private mode. Losing persistence beats breaking
     // the app the user is currently typing into.
   }
+}
+
+// Wipe everything this app stored. Used by Settings -> Data.
+export function clearAllPersisted(): void {
+  for (const key of Object.values(STORAGE_KEYS)) clearPersisted(key);
 }
 
 export function clearPersisted(key: string): void {
