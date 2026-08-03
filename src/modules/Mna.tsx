@@ -63,14 +63,32 @@ export function Mna({ state, onState, onReset, presets, currentCompany }: Props)
     onState({ ...state, [which]: next });
   const setDeal = (patch: Partial<MnaDeal>) => onState({ ...state, deal: { ...deal, ...patch } });
 
-  // Stock and cash are chosen; debt is whatever is left. This makes the
-  // mix always sum to 100% by construction rather than by validation.
-  const setMix = (key: 'pctStock' | 'pctCash', v: number) => {
-    const other = key === 'pctStock' ? deal.pctCash : deal.pctStock;
-    const capped = Math.min(Math.max(v, 0), 1 - other);
-    const nextStock = key === 'pctStock' ? capped : deal.pctStock;
-    const nextCash = key === 'pctCash' ? capped : deal.pctCash;
-    setDeal({ pctStock: nextStock, pctCash: nextCash, pctDebt: 1 - nextStock - nextCash });
+  // All three sliders are draggable, and the one you drag takes what it
+  // needs from the other two in proportion to their current sizes.
+  //
+  // The first version made only stock and cash draggable, with debt as the
+  // leftover. That meant dragging stock stopped dead at 100% minus cash:
+  // an invisible wall you could only get past by going and shrinking a
+  // different slider first. Proportional give means any slider reaches
+  // 100% in one drag, and the mix still sums to exactly 100%.
+  type MixKey = 'pctStock' | 'pctCash' | 'pctDebt';
+  const setMix = (key: MixKey, raw: number) => {
+    const v = Math.min(1, Math.max(0, raw));
+    const others = (['pctStock', 'pctCash', 'pctDebt'] as MixKey[]).filter((k) => k !== key);
+    const rest = 1 - v;
+    const sumOthers = others.reduce((sum, k) => sum + deal[k], 0);
+
+    // If both others are already at zero there is no proportion to keep,
+    // so split what is left evenly rather than picking a winner.
+    const share = (k: MixKey) =>
+      sumOthers <= 1e-9 ? rest / 2 : deal[k] * (rest / sumOthers);
+
+    const a = Math.round(share(others[0]) * 1e4) / 1e4;
+    const next = { [key]: v, [others[0]]: a, [others[1]]: 0 } as Record<MixKey, number>;
+    // Derive the last one by subtraction so the three sum to exactly 1
+    // regardless of floating-point drift.
+    next[others[1]] = Math.max(0, 1 - v - a);
+    setDeal(next);
   };
 
   return (
@@ -115,8 +133,8 @@ export function Mna({ state, onState, onReset, presets, currentCompany }: Props)
               onChange={(v) => setMix('pctStock', v)} />
             <MixRow label="Cash" v={deal.pctCash} amount={r.cashConsideration}
               onChange={(v) => setMix('pctCash', v)} />
-            {/* Debt is the remainder, so the three always sum to 100%. */}
-            <MixRow label="Debt" v={deal.pctDebt} amount={r.debtConsideration} readOnly />
+            <MixRow label="Debt" v={deal.pctDebt} amount={r.debtConsideration}
+              onChange={(v) => setMix('pctDebt', v)} />
           </div>
 
           <div className="mna-rates">
@@ -310,16 +328,16 @@ function PctInput({ v, onChange }: { v: number; onChange: (v: number) => void })
   );
 }
 
-function MixRow({ label, v, amount, onChange, readOnly }: {
-  label: string; v: number; amount: number; onChange?: (v: number) => void; readOnly?: boolean;
+function MixRow({ label, v, amount, onChange }: {
+  label: string; v: number; amount: number; onChange: (v: number) => void;
 }) {
   return (
-    <div className={`mna-mixrow ${readOnly ? 'is-derived' : ''}`}>
+    <div className="mna-mixrow">
       <span className="mna-mixrow-label">{label}</span>
       <input
         className="mna-mixrange" type="range" min={0} max={1} step={0.01} value={v}
-        onChange={(e) => onChange?.(Number(e.target.value))}
-        disabled={readOnly} aria-label={`${label} share of consideration`}
+        onChange={(e) => onChange(Number(e.target.value))}
+        aria-label={`${label} share of consideration`}
       />
       <span className="mna-mixrow-pct tabular">{fmtPct(v, 0)}</span>
       <span className="mna-mixrow-amt tabular">{fmtMoney(amount)}</span>

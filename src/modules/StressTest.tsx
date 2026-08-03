@@ -15,6 +15,7 @@
 // ============================================================
 import { useMemo, useState, useEffect } from 'react';
 import { Card, StatCard } from '../components/Card';
+import { IconArrowDown } from '../components/Icons';
 import { TopBar } from '../components/TopBar';
 import { PortfolioSummary } from '../components/PortfolioSummary';
 import { PortfolioEditor } from '../components/PortfolioEditor';
@@ -264,7 +265,13 @@ function ReplayRow({ name, drop, recovery, active, disabled, onClick }:
         <div className="replay-event">{name}</div>
         <div className="replay-recovery">{recovery === '—' ? 'add assets to replay' : `Recovered in ${recovery}`}</div>
       </div>
-      <span className={`delta ${drop === '—' ? 'delta--neutral' : 'delta--down'} tabular`}>{drop}</span>
+      {/* Colour is never the only signal: the arrow carries the meaning
+          for anyone who cannot separate the hues. The stat cards already
+          did this; these chips did not. */}
+      <span className={`delta ${drop === '—' ? 'delta--neutral' : 'delta--down'} tabular`}>
+        {drop !== '—' && <IconArrowDown size={13} />}
+        <span>{drop}</span>
+      </span>
     </button>
   );
 }

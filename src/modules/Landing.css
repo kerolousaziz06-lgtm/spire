@@ -4,9 +4,13 @@
    map with a circular focus lens. Word sits ABOVE the image.
    ============================================================ */
 .ed {
-  --ground: #17140F;      /* dark background (matches map darks) */
-  --ground-2: #1E1A14;
-  --light: #ECE7DB;       /* light ink (bone) */
+  /* Point at the shared tokens rather than repeating their hex values;
+     these two were already identical, so nothing moves on screen.
+     The two alphas below stay local on purpose: the Landing's marginalia
+     are dimmer than the dashboards' secondary/muted text (0.62 / 0.34 vs
+     0.68 / 0.56), and that is the design, not an oversight. */
+  --ground: var(--bg-base);
+  --light: var(--text-primary);
   --light-soft: rgba(236,231,219,0.62);
   --light-faint: rgba(236,231,219,0.34);
   position: relative;
