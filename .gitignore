@@ -2,3 +2,6 @@ node_modules
 dist
 .vite
 *.log
+
+# TypeScript incremental build cache (created by npm run build)
+*.tsbuildinfo
