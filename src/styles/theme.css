@@ -1,4 +1,41 @@
 /* ============================================================
+   SELF-HOSTED FACES — for machines that do not have these fonts.
+
+   Both are SIL Open Font License, so shipping the files is fine, and
+   they are served from the bundle rather than a CDN because the project
+   forbids external runtime dependencies.
+
+   These replace a runtime <link> to fonts.googleapis.com that main.tsx
+   used to inject. Neither typeface is installed on a typical machine
+   (verified: on a page with no network both fall back to Times), so that
+   link was not an enhancement - it was the only thing standing between
+   the app and Times New Roman.
+
+   local() is listed first so anyone who does happen to have the font
+   installed uses their own copy and downloads nothing.
+
+   Variable fonts: one file each covers the whole weight range, which is
+   why two files cover 400/500/600/700. Latin subset only, which is every
+   character this app renders.
+   ============================================================ */
+@font-face {
+  font-family: 'Space Grotesk';
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: local('Space Grotesk'),
+       url('../assets/fonts/spacegrotesk-latin.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 100 800;
+  font-display: swap;
+  src: local('JetBrains Mono'),
+       url('../assets/fonts/jetbrainsmono-latin.woff2') format('woff2');
+}
+
+/* ============================================================
    MonteVue — Design Tokens (single source of truth for the look)
    Every color/space/font in the app points back to a token here.
    Change a value here and it updates everywhere. This is the
@@ -62,7 +99,7 @@ html, body, #root { height: 100%; }
 body {
   background: var(--bg-base);
   color: var(--text-primary);
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: system-ui, -apple-system, sans-serif;  /* overridden below */
   font-size: var(--fs-base);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
@@ -163,7 +200,9 @@ body.reduce-motion *::after {
      Landing has no rounded cards at all. */
   --r-sm: 3px; --r-md: 4px; --r-lg: 6px; --r-xl: 8px;
 
-  --font-grotesk: 'Space Grotesk', 'Inter', system-ui, sans-serif;
+  /* Both resolve to the bundled @font-face at the top of this file. The
+     trailing names only matter if the woff2 fails to load. */
+  --font-grotesk: 'Space Grotesk', system-ui, sans-serif;
   --font-mono:    'JetBrains Mono', 'SF Mono', ui-monospace, monospace;
 }
 
