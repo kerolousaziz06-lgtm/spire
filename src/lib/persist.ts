@@ -123,10 +123,20 @@ export function reviveNumericRecord<T extends Record<string, number | null>>(
   const src = raw as Record<string, unknown>;
   const out = { ...fallback };
   for (const key of Object.keys(fallback) as (keyof T)[]) {
-    const v = src[key as string];
-    // null is a real stored value here: the user deliberately cleared the
-    // field. Anything that is neither null nor a finite number (undefined
-    // from an older payload, a string, NaN) keeps the fallback.
+    const k = key as string;
+    if (!(k in src)) {
+      // The key did not exist when this was saved, which happens the first
+      // time a field is added. Treat it as NOT PROVIDED rather than
+      // inheriting the sample's value: quietly attaching the sample
+      // company's figure to the user's company is the confidently-wrong
+      // failure this codebase keeps hitting. Blank is honest, and the
+      // metrics that need it skip themselves.
+      out[key] = null as T[keyof T];
+      continue;
+    }
+    const v = src[k];
+    // null is a real stored value: the user deliberately cleared it.
+    // Present but unusable (a string, NaN) keeps the fallback.
     if (v === null) out[key] = null as T[keyof T];
     else if (typeof v === 'number' && Number.isFinite(v)) out[key] = v as T[keyof T];
   }

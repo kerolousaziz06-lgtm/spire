@@ -18,7 +18,7 @@ import { runSimulation } from '../src/lib/montecarlo';
 import { DEFAULT_ASSUMPTIONS, TAIL_DOF, type Assumptions } from '../src/lib/settings';
 import { computeRiskProfile, computeFrontier } from '../src/lib/risk';
 import { CRASH_EVENTS, replayCrash } from '../src/lib/crashes';
-import { dupont, SAMPLE_INPUT } from '../src/lib/analysis';
+import { dupont, multiples, SAMPLE_INPUT } from '../src/lib/analysis';
 import { runDcf } from '../src/lib/dcf';
 import { runLbo, SAMPLE_LBO } from '../src/lib/lbo';
 import { runMna, type MnaCompany, type MnaDeal } from '../src/lib/mna';
@@ -408,4 +408,48 @@ console.log('\n  deal sanity:');
 
   const clean = runMna(A, { ...T, sharePrice: 20 }, { ...D, offerPricePerShare: 25 });
   console.log(`    the hand-checked deal  issues=${clean.issues.length}  ${clean.issues.length === 0 ? 'PASS (no false positives)' : 'FAIL'}`);
+}
+
+
+console.log('\n' + '='.repeat(74));
+console.log('H. Valuation multiples, against a hand-computed case');
+console.log('='.repeat(74));
+{
+  const c = SAMPLE_INPUT;
+  const m = multiples(c);
+  const get = (k: string) => m.find((x) => x.key === k)!.value;
+
+  //   market cap = 15.2 x 230                 = 3496
+  //   P/E        = 3496 / 94                  = 37.191489
+  //   EV         = 3496 + 107 - 30            = 3573
+  //   EBITDA     = 123 + 11                   = 134
+  //   EV/EBITDA  = 3573 / 134                 = 26.664179
+  //   P/B        = 3496 / 57                  = 61.333333
+  //   P/S        = 3496 / 391                 = 8.941176
+  const checks: [string, number, number][] = [
+    ['P/E',       get('pe'),       3496 / 94],
+    ['EV/EBITDA', get('evEbitda'), 3573 / 134],
+    ['P/B',       get('pb'),       3496 / 57],
+    ['P/S',       get('ps'),       3496 / 391],
+  ];
+  let ok = true;
+  for (const [label, got, want] of checks) {
+    const good = Math.abs(got - want) < 1e-9;
+    if (!good) ok = false;
+    console.log(`  ${label.padEnd(11)} ${f(got, 6).padStart(11)}  hand: ${f(want, 6).padStart(11)}  ${good ? 'PASS' : 'FAIL'}`);
+  }
+  console.log(`  ALL PASS    ${ok ? 'yes' : 'NO'}`);
+
+  // A P/E on a loss is meaningless, not large. Must be omitted.
+  const loss = multiples({ ...c, netIncome: -50 });
+  console.log(`\n  netIncome -50   P/E present? ${loss.some((x) => x.key === 'pe') ? 'yes FAIL' : 'no  PASS (omitted, not shown negative)'}`);
+
+  // D&A blank -> EV/EBITDA skipped rather than proxied
+  const noDa = multiples({ ...c, depreciationAmortization: null });
+  console.log(`  D&A blank       EV/EBITDA present? ${noDa.some((x) => x.key === 'evEbitda') ? 'yes FAIL' : 'no  PASS (skipped, not estimated)'}`);
+  console.log(`                  others still shown: ${noDa.map((x) => x.key).join(', ')}`);
+
+  // No market data at all -> nothing at all, no crash
+  const noMkt = multiples({ ...c, sharePrice: null, sharesOutstanding: null });
+  console.log(`  no share price  multiples returned: ${noMkt.length}  ${noMkt.length === 0 ? 'PASS' : 'FAIL'}`);
 }

@@ -107,3 +107,13 @@
 .val-sens-swatch.is-under { background: var(--gain); }
 .val-sens-swatch.is-fair { background: var(--bg-panel); }
 .val-sens-swatch.is-over { background: var(--loss); }
+
+/* Shown when EV/EBITDA is absent, naming the one figure that unlocks it
+   rather than silently offering three multiples instead of four. */
+.val-mult-note {
+  margin-top: var(--stack-gap);
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  line-height: 1.55;
+  max-width: 72ch;
+}

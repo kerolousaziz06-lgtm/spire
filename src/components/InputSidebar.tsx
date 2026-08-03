@@ -38,7 +38,7 @@ const GROUPS: { title: string; fields: CompanyField[] }[] = [
   },
   {
     title: 'Cash Flow',
-    fields: ['operatingCashFlow', 'capex'],
+    fields: ['operatingCashFlow', 'capex', 'depreciationAmortization'],
   },
   {
     title: 'Market',

@@ -37,6 +37,7 @@ export type CompanyInput = {
   // Cash flow
   operatingCashFlow: number | null;
   capex: number | null;              // capital expenditures (a positive number)
+  depreciationAmortization: number | null;  // for EBITDA; optional
   // Market
   sharesOutstanding: number | null;
   sharePrice: number | null;
@@ -53,6 +54,7 @@ export const OPTIONAL_FIELDS: ReadonlySet<CompanyField> = new Set<CompanyField>(
   'totalDebt',         // must be assembled; a debt-free firm has none
   'sharesOutstanding', // only needed for per-share valuation
   'sharePrice',        // only needed to compare against the market
+  'depreciationAmortization', // only needed for EV/EBITDA
 ]);
 
 // Display names, shared by the input sidebar and the "missing data"
@@ -73,6 +75,7 @@ export const FIELD_LABELS: Record<CompanyField, string> = {
   shareholdersEquity: "Shareholders' equity",
   operatingCashFlow: 'Operating cash flow',
   capex: 'Capital expenditures',
+  depreciationAmortization: 'Depreciation & amortisation',
   sharesOutstanding: 'Shares outstanding',
   sharePrice: 'Share price',
 };
@@ -103,6 +106,7 @@ export const FIELD_HINTS: Record<CompanyField, string> = {
   shareholdersEquity: 'Balance sheet, "total stockholders\' equity". Exclude minority interest if shown separately.',
   operatingCashFlow: 'Cash flow statement, "net cash provided by operating activities".',
   capex: 'Cash flow statement, investing section: "purchases of property, plant and equipment". Enter as a positive number.',
+  depreciationAmortization: 'Cash flow statement, near the top, added back to net income. Needed for EBITDA; leave blank and EV/EBITDA is skipped rather than guessed.',
   sharesOutstanding: 'Cover page of the 10-K, or the share count used for diluted EPS.',
   sharePrice: "Today's market price per share.",
 };
@@ -125,6 +129,7 @@ export const SAMPLE_INPUT: CompanyInput = {
   shareholdersEquity: 57,
   operatingCashFlow: 118,
   capex: 10,
+  depreciationAmortization: 11,
   sharesOutstanding: 15.2,
   sharePrice: 230,
 };
@@ -456,6 +461,69 @@ export function efficiency(c: CompanyInput): Metric[] {
     key: 'cashConversion', label: 'Cash conversion', value: cashConversion, display: mult(cashConversion),
     meaning: `For every $1 of reported profit, the business produced $${cashConversion.toFixed(2)} of actual operating cash. Near or above 1 means earnings are cash-backed and real; well below 1 is a quality red flag.`,
     ...verdictify(rate(cashConversion, [0.9, 0.7], true), 'cash conversion'), inputs: ['operatingCashFlow', 'netIncome'], higherIsBetter: true,
+  });
+
+  return out;
+}
+
+// ============================================================
+// MULTIPLES — what the market is paying, not what the business earns.
+//
+// Every ratio above asks "is this a good business". These ask "is it
+// cheap", which is a different question and the one the DCF then answers
+// from scratch. Lower is cheaper for all four.
+//
+// Each one skips rather than guessing. A P/E on negative earnings is not
+// a large number, it is a meaningless one, so it is omitted rather than
+// rendered as a minus sign someone might read as "cheap".
+// ============================================================
+export function multiples(c: CompanyInput): Metric[] {
+  const out: Metric[] = [];
+
+  const marketCap = has(c.sharePrice, c.sharesOutstanding)
+    ? (c.sharePrice as number) * (c.sharesOutstanding as number) : null;
+
+  // Enterprise value: what it costs to buy the whole business, debt
+  // included and cash netted off, because you get the cash too.
+  const ev = marketCap !== null && has(c.totalDebt, c.cash)
+    ? marketCap + (c.totalDebt as number) - (c.cash as number) : null;
+
+  const pe = marketCap !== null && c.netIncome !== null && (c.netIncome as number) > 0
+    ? marketCap / (c.netIncome as number) : null;
+  if (pe !== null) out.push({
+    key: 'pe', label: 'Price / earnings', value: pe, display: mult(pe),
+    meaning: `The market pays ${currencySymbol()}${pe.toFixed(2)} for every ${currencySymbol()}1 of annual profit. Put another way, ${pe.toFixed(0)} years of current earnings buys the company outright.`,
+    ...verdictify(rate(pe, [15, 25], false), 'P/E'),
+    inputs: ['sharePrice', 'sharesOutstanding', 'netIncome'], higherIsBetter: false,
+  });
+
+  const evEbitda = ev !== null && has(c.operatingIncome, c.depreciationAmortization)
+    && (c.operatingIncome as number) + (c.depreciationAmortization as number) > 0
+    ? ev / ((c.operatingIncome as number) + (c.depreciationAmortization as number)) : null;
+  if (evEbitda !== null) out.push({
+    key: 'evEbitda', label: 'EV / EBITDA', value: evEbitda, display: mult(evEbitda),
+    meaning: `Buying the whole business, debt included, costs ${evEbitda.toFixed(1)} times its yearly cash operating profit. The multiple acquirers and lenders quote, because it ignores how the company is financed.`,
+    ...verdictify(rate(evEbitda, [10, 15], false), 'EV/EBITDA'),
+    inputs: ['sharePrice', 'sharesOutstanding', 'totalDebt', 'cash', 'operatingIncome', 'depreciationAmortization'],
+    higherIsBetter: false,
+  });
+
+  const pb = marketCap !== null && c.shareholdersEquity !== null && (c.shareholdersEquity as number) > 0
+    ? marketCap / (c.shareholdersEquity as number) : null;
+  if (pb !== null) out.push({
+    key: 'pb', label: 'Price / book', value: pb, display: mult(pb),
+    meaning: `The market values the company at ${pb.toFixed(1)} times the accounting value of its net assets. High is normal for businesses whose worth is people and brand rather than property.`,
+    ...verdictify(rate(pb, [3, 6], false), 'P/B'),
+    inputs: ['sharePrice', 'sharesOutstanding', 'shareholdersEquity'], higherIsBetter: false,
+  });
+
+  const ps = marketCap !== null && c.revenue !== null && (c.revenue as number) > 0
+    ? marketCap / (c.revenue as number) : null;
+  if (ps !== null) out.push({
+    key: 'ps', label: 'Price / sales', value: ps, display: mult(ps),
+    meaning: `The market pays ${currencySymbol()}${ps.toFixed(2)} for every ${currencySymbol()}1 of annual revenue. Useful when profits are thin or negative, since sales are harder to distort than earnings.`,
+    ...verdictify(rate(ps, [2, 5], false), 'P/S'),
+    inputs: ['sharePrice', 'sharesOutstanding', 'revenue'], higherIsBetter: false,
   });
 
   return out;

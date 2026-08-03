@@ -11,7 +11,8 @@
 // statements -> valuation connection, but stay directly editable.
 // ============================================================
 import { useMemo, useState, useEffect } from 'react';
-import { missingFields, type CompanyInput, type CompanyField } from '../lib/analysis';
+import { missingFields, multiples, reconcile, applyReconciliation, type CompanyInput, type CompanyField } from '../lib/analysis';
+import { MetricRow } from '../components/MetricRow';
 import { MissingData } from '../components/MissingData';
 import { runDcf, dcfSensitivity, type DcfInput } from '../lib/dcf';
 import { Card } from '../components/Card';
@@ -31,6 +32,14 @@ const DCF_REQUIRES: readonly CompanyField[] = [
 
 export function ValuationTab({ input }: { input: CompanyInput }) {
   const missing = missingFields(input, DCF_REQUIRES);
+
+  // What the market is paying, before the DCF works out what it is worth
+  // from scratch. Reconciliation applies here too: a multiple built on a
+  // contradicted figure shows its value with the rating withheld.
+  const mult = useMemo(
+    () => applyReconciliation(multiples(input), reconcile(input)),
+    [input]
+  );
   // Assumptions the user can tune. Pre-filled from the statements.
   // The ?? 0 fallbacks only keep the hooks below unconditional; nothing
   // derived from them renders while `missing` is non-empty.
@@ -70,6 +79,25 @@ export function ValuationTab({ input }: { input: CompanyInput }) {
 
   return (
     <div className="val">
+      {/* What the market is paying, before the DCF works out from scratch
+          what the business is worth. The app used to jump straight from
+          ratios to DCF with no multiples in between. */}
+      {mult.length > 0 && (
+        <Card delay={0}>
+          <div className="section-head">
+            <h2 className="section-title">What the market is paying</h2>
+            <span className="section-note">multiples · lower is cheaper</span>
+          </div>
+          {mult.map((m) => <MetricRow key={m.key} metric={m} />)}
+          {!mult.some((m) => m.key === 'evEbitda') && (
+            <p className="val-mult-note">
+              EV/EBITDA needs depreciation &amp; amortisation, which sits near the top of the cash flow
+              statement. Enter it in the sidebar and this fills in; it is not estimated for you.
+            </p>
+          )}
+        </Card>
+      )}
+
       {/* Hero: intrinsic value vs price */}
       <Card glow delay={0} className="val-hero">
         <div className="val-hero-grid">
