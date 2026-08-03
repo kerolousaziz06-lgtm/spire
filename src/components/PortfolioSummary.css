@@ -3,7 +3,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: var(--s4);
+  margin-bottom: var(--stack-gap);
 }
 
 /* $/% toggle on the card */
@@ -21,7 +21,7 @@
   border-radius: 6px; cursor: pointer; transition: color 160ms ease, background 160ms ease;
 }
 .ps-toggle button:hover { color: var(--text-secondary); }
-.ps-toggle button.is-active { background: var(--accent); color: #fff; }
+.ps-toggle button.is-active { background: var(--accent); color: var(--bg-base); }
 
 /* The clickable area (list + bar + total). Strip button styling. */
 .ps-open {
@@ -34,7 +34,23 @@
 }
 .ps-open:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
 
-.ps-list { display: flex; flex-direction: column; gap: var(--s3); }
+/* The list always reserves room for exactly MAX_ROWS (4) rows, so the card's
+   height is identical whether the portfolio holds 1 asset or 13. Anything
+   beyond 4 is collapsed into the "Other assets" row by the component, so the
+   list can never need a fifth line. */
+.ps-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--stack-gap);
+  --ps-row-h: 20px;
+  min-height: calc(4 * var(--ps-row-h) + 3 * var(--stack-gap));
+}
+.ps-row { min-height: var(--ps-row-h); }
+
+/* The aggregate row: same weight as the rest, but its label is a summary
+   rather than an asset name, and it carries a hover list of its contents. */
+.ps-row.is-other { cursor: help; }
+.ps-row.is-other .ps-name { color: var(--text-muted); font-style: italic; }
 .ps-row { display: flex; align-items: center; gap: var(--s2); }
 .ps-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .ps-name { font-size: var(--fs-sm); color: var(--text-secondary); flex: 1; }
@@ -44,23 +60,24 @@
 /* Stacked allocation bar */
 .ps-bar {
   display: flex; height: 8px; border-radius: 6px; overflow: hidden;
-  margin-top: var(--s4); background: var(--bg-panel);
+  margin-top: var(--stack-gap); background: var(--bg-panel);
 }
 .ps-bar-seg { height: 100%; transition: width 300ms ease; }
 
 .ps-total {
   display: flex; justify-content: space-between; align-items: center;
-  margin-top: var(--s5); padding-top: var(--s4);
+  margin-top: var(--stack-gap); padding-top: calc(var(--stack-gap) * 0.7);
   border-top: 1px solid var(--border);
   font-size: var(--fs-sm); color: var(--text-secondary);
 }
-.ps-total-amount { font-size: var(--fs-lg); font-weight: 700; color: var(--text-primary); }
+.ps-total-amount { font-size: var(--fs-base); font-weight: 700; color: var(--text-primary); }
 
 /* subtle "click to edit" affordance that brightens on hover */
 .ps-edit-hint {
-  margin-top: var(--s4);
+  margin-top: calc(var(--stack-gap) * 0.6);
   text-align: center;
   font-size: var(--fs-xs);
+  line-height: 1.2;
   color: var(--text-muted);
   transition: color 160ms ease;
 }

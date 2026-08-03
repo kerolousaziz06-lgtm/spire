@@ -13,7 +13,7 @@
   margin: var(--s3) 0 var(--s4);
 }
 .summary-verdict--good { background: var(--gain-dim); color: var(--gain); }
-.summary-verdict--ok { background: rgba(212,169,76,0.14); color: #D4A94C; }
+.summary-verdict--ok { background: var(--warn-dim); color: var(--warn); }
 .summary-verdict--bad { background: var(--loss-dim); color: var(--loss); }
 
 .summary-list-label {

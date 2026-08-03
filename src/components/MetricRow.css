@@ -23,7 +23,7 @@
   letter-spacing: 0.04em;
 }
 .mr-pill--good { background: var(--gain-dim); color: var(--gain); }
-.mr-pill--ok   { background: rgba(212,169,76,0.14); color: #D4A94C; }
+.mr-pill--ok   { background: var(--warn-dim); color: var(--warn); }
 .mr-pill--bad  { background: var(--loss-dim); color: var(--loss); }
 
 .mr-meaning {
@@ -32,4 +32,12 @@
   color: var(--text-secondary);
   line-height: 1.5;
   max-width: 60ch;
+}
+
+/* Withheld verdict: the value is still shown, but rating it would mean
+   putting a confident judgement on figures that cannot be right. */
+.mr-pill--unrated {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px dashed var(--border-strong);
 }

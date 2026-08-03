@@ -1,0 +1,30 @@
+.recon {
+  border: 1px solid var(--border-strong);
+  border-left-width: 3px;
+  border-radius: var(--r-md);
+  padding: var(--card-pad);
+  background: var(--bg-card);
+}
+.recon--error { border-left-color: var(--loss); }
+.recon--caution { border-left-color: var(--warn); }
+
+.recon-title {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: var(--s3);
+}
+.recon--error .recon-title { color: var(--loss); }
+.recon--caution .recon-title { color: var(--warn); }
+
+.recon-list { list-style: none; padding: 0; display: flex; flex-direction: column; gap: var(--s3); }
+.recon-item { display: flex; flex-direction: column; gap: 2px; }
+.recon-fields {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-primary);
+}
+.recon-message { font-size: var(--fs-sm); line-height: 1.5; color: var(--text-secondary); max-width: 78ch; }

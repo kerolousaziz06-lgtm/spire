@@ -15,19 +15,27 @@
 import { useState } from 'react';
 import type { SimulationResult } from '../lib/montecarlo';
 import { fmtMoneyShort, fmtMoney } from '../lib/format';
+import { useElementSize } from '../lib/hooks';
 import './FanChart.css';
 
 type Props = { result: SimulationResult };
 
-const W = 640;      // internal drawing width (SVG scales to container)
-const H = 300;      // internal drawing height
 const PAD_L = 8;    // left padding
 const PAD_R = 8;    // right padding
 const PAD_T = 16;   // top padding
 const PAD_B = 28;   // bottom padding (room for year labels)
 
+// Fallbacks for the first paint, before the wrapper has been measured.
+const W0 = 640, H0 = 300;
+
 export function FanChart({ result }: Props) {
   const [hoverYear, setHoverYear] = useState<number | null>(null);
+
+  // The viewBox tracks the wrapper's real pixel size, so the chart fills the
+  // height the grid hands it instead of deriving height from its width.
+  const { ref: wrapRef, w: measuredW, h: measuredH } = useElementSize<HTMLDivElement>();
+  const W = measuredW || W0;
+  const H = measuredH || H0;
 
   const { bands, years, startValue } = result;
   if (bands.length === 0 || startValue === 0) {
@@ -71,8 +79,12 @@ export function FanChart({ result }: Props) {
 
   return (
     <div className="fan-wrap">
+      {/* Own measured box: the readout bar below must not count toward the
+          plot's height, so the ref goes on a wrapper around the svg only. */}
+      <div className="fan-plot" ref={wrapRef}>
       <svg
         viewBox={`0 0 ${W} ${H}`}
+        preserveAspectRatio="none"
         className="fan"
         onMouseMove={onMove}
         onMouseLeave={() => setHoverYear(null)}
@@ -120,7 +132,7 @@ export function FanChart({ result }: Props) {
             <line x1={xAt(readYear)} x2={xAt(readYear)} y1={PAD_T} y2={H - PAD_B}
               stroke="var(--accent-bright)" strokeWidth="1" opacity="0.4" />
             <circle cx={xAt(readYear)} cy={yAt(readBand.p50)} r="4"
-              fill="#fff" stroke="var(--accent-bright)" strokeWidth="2" />
+              fill="var(--accent-bright)" stroke="var(--bg-base)" strokeWidth="2" />
           </>
         )}
 
@@ -132,6 +144,7 @@ export function FanChart({ result }: Props) {
           </text>
         ))}
       </svg>
+      </div>
 
       {/* Readout bar BELOW the chart — never overlaps the plot. Shows
           the hovered year (or the final year by default). */}

@@ -15,9 +15,14 @@ type Props = {
   subtitle: string;
   numPaths: number;
   onNumPaths: (n: number) => void;
+  // Optional: clears saved data and returns to the sample. Needed once
+  // inputs persist, or a half-finished portfolio has no route back to a
+  // working demo state.
+  onReset?: () => void;
+  resetLabel?: string;
 };
 
-export function TopBar({ title, subtitle, numPaths, onNumPaths }: Props) {
+export function TopBar({ title, subtitle, numPaths, onNumPaths, onReset, resetLabel = 'Reset' }: Props) {
   return (
     <header className="topbar">
       <div>
@@ -26,6 +31,11 @@ export function TopBar({ title, subtitle, numPaths, onNumPaths }: Props) {
       </div>
 
       <div className="topbar-actions">
+        {onReset && (
+          <button className="topbar-reset" onClick={onReset} title="Discard saved changes and return to the sample data">
+            {resetLabel}
+          </button>
+        )}
         <span className="pills-label">Simulations</span>
         <div className="pills" role="group" aria-label="Number of simulations">
           {RANGES.map((r) => (

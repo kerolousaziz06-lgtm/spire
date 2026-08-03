@@ -38,9 +38,9 @@ export function LogoMark({ size = 28, style }: IconProps) {
       {/* the prism triangle */}
       <path d="M12 8 L20 16 L12 24 Z" stroke="var(--accent-bright)" strokeWidth="1.75" strokeLinejoin="round" fill="var(--accent-dim)" />
       {/* the fan of outgoing futures */}
-      <path d="M20 16 L29 9"  stroke="#60A5FA" strokeWidth="1.75" strokeLinecap="round" opacity="0.9" />
-      <path d="M20 16 L29 16" stroke="#3B82F6" strokeWidth="1.75" strokeLinecap="round" opacity="0.7" />
-      <path d="M20 16 L29 23" stroke="#2563EB" strokeWidth="1.75" strokeLinecap="round" opacity="0.5" />
+      <path d="M20 16 L29 9"  stroke="var(--accent)" strokeWidth="1.75" strokeLinecap="round" opacity="0.85" />
+      <path d="M20 16 L29 16" stroke="var(--accent)" strokeWidth="1.75" strokeLinecap="round" opacity="0.55" />
+      <path d="M20 16 L29 23" stroke="var(--accent)" strokeWidth="1.75" strokeLinecap="round" opacity="0.30" />
     </svg>
   );
 }
@@ -57,6 +57,14 @@ export const IconScreener = (p: IconProps) => (
 export const IconValuation = (p: IconProps) => (
   <Svg {...p}><path d="M12 2v20" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></Svg>
 );
+// Two entities combining — the shape of the question M&A asks.
+export const IconMerge = (p: IconProps) => (
+  <Svg {...p}>
+    <circle cx="8" cy="8" r="4.5" /><circle cx="16" cy="8" r="4.5" />
+    <path d="M12 12.5 V17" /><path d="M8.5 17 H15.5" /><path d="M12 17 v3.5" />
+  </Svg>
+);
+
 export const IconSettings = (p: IconProps) => (
   <Svg {...p}><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></Svg>
 );

@@ -8,7 +8,10 @@
 // ============================================================
 import { useMemo } from 'react';
 import type { CompanyInput, Metric, Health } from '../lib/analysis';
-import { profitability, liquidity, leverage, efficiency, dupont } from '../lib/analysis';
+import { missingFields } from '../lib/analysis';
+import { MissingData } from '../components/MissingData';
+import { profitability, liquidity, leverage, efficiency, dupont, reconcile, applyReconciliation, unratableFields } from '../lib/analysis';
+import { ReconNotice } from '../components/ReconNotice';
 import { Card } from '../components/Card';
 import { MetricRow } from '../components/MetricRow';
 import './HealthTab.css';
@@ -24,26 +27,46 @@ function overall(all: Metric[]): Health {
 const HEALTH_WORD: Record<Health, string> = { good: 'Financially healthy', ok: 'Mixed health', bad: 'Financially strained' };
 
 export function HealthTab({ input }: { input: CompanyInput }) {
-  const prof = useMemo(() => profitability(input), [input]);
-  const liq = useMemo(() => liquidity(input), [input]);
-  const lev = useMemo(() => leverage(input), [input]);
-  const eff = useMemo(() => efficiency(input), [input]);
+  const issues = useMemo(() => reconcile(input), [input]);
+  const prof = useMemo(() => applyReconciliation(profitability(input), issues), [input, issues]);
+  const liq = useMemo(() => applyReconciliation(liquidity(input), issues), [input, issues]);
+  const lev = useMemo(() => applyReconciliation(leverage(input), issues), [input, issues]);
+  const eff = useMemo(() => applyReconciliation(efficiency(input), issues), [input, issues]);
   const dp = useMemo(() => dupont(input), [input]);
 
   const all = [...prof, ...liq, ...lev, ...eff];
-  const verdict = overall(all);
+  const rated = all.filter((m) => m.health !== null);
+  const goodCount = rated.filter((m) => m.health === 'good').length;
 
-  const goodCount = all.filter((m) => m.health === 'good').length;
+  // The headline is a judgement on the whole company, so it needs figures
+  // that at least describe a possible one. Any hard contradiction, or too
+  // little data to be meaningful, and it is withheld entirely.
+  const hasError = issues.some((i) => i.severity === 'error');
+  const tooThin = rated.length < 4;
+  const verdict = overall(rated);
 
   return (
     <div className="health">
-      {/* Headline verdict */}
-      <Card glow delay={0} className="health-headline">
-        <div className={`health-badge health-badge--${verdict}`}>{HEALTH_WORD[verdict]}</div>
-        <p className="health-headline-sub">
-          {goodCount} of {all.length} key metrics rate as strong. Read down for what each one means and where the business is solid or exposed.
-        </p>
-      </Card>
+      {issues.length > 0 && <ReconNotice issues={issues} />}
+
+      {/* Headline verdict — withheld when the inputs contradict each other */}
+      {hasError || tooThin ? (
+        <Card delay={0} className="health-headline">
+          <div className="health-badge health-badge--withheld">Verdict withheld</div>
+          <p className="health-headline-sub">
+            {hasError
+              ? 'These figures contradict each other, so an overall judgement would be misleading. Individual ratios still compute where they can; the ones that depend on the contradicted figures are marked unrated.'
+              : `Only ${rated.length} ${rated.length === 1 ? 'ratio' : 'ratios'} can be computed so far. Enter more of the statement figures for an overall read.`}
+          </p>
+        </Card>
+      ) : (
+        <Card glow delay={0} className="health-headline">
+          <div className={`health-badge health-badge--${verdict}`}>{HEALTH_WORD[verdict]}</div>
+          <p className="health-headline-sub">
+            {goodCount} of {rated.length} key metrics rate as strong. Read down for what each one means and where the business is solid or exposed.
+          </p>
+        </Card>
+      )}
 
       <Section title="Profitability" note="How much profit the company squeezes from sales" metrics={prof} delay={1} />
       <Section title="Liquidity" note="Can it cover its short-term bills?" metrics={liq} delay={2} />
@@ -59,19 +82,29 @@ export function HealthTab({ input }: { input: CompanyInput }) {
           Return on equity alone hides <em>how</em> a company earns its returns. DuPont splits it into three drivers, so you can see whether ROE comes from fat margins, efficient asset use, or simply a lot of debt.
         </p>
 
-        <div className="dupont-flow">
-          <DuPontFactor label="Net margin" value={(dp.netMargin * 100).toFixed(1) + '%'} sub="profit per sales dollar" />
-          <span className="dupont-op">{"\u00D7"}</span>
-          <DuPontFactor label="Asset turnover" value={dp.assetTurnover.toFixed(2) + '\u00D7'} sub="sales per asset dollar" />
-          <span className="dupont-op">{"\u00D7"}</span>
-          <DuPontFactor label="Equity multiplier" value={dp.equityMultiplier.toFixed(2) + '\u00D7'} sub="leverage (assets/equity)" />
-          <span className="dupont-op">=</span>
-          <DuPontFactor label="ROE" value={(dp.roe * 100).toFixed(1) + '%'} sub="return on equity" highlight />
-        </div>
+        {dp === null ? (
+          <MissingData
+            what="the DuPont breakdown"
+            fields={missingFields(input, ['netIncome', 'revenue', 'totalAssets', 'shareholdersEquity'])}
+          />
+        ) : (
+          <>
 
-        <div className={`dupont-driver dupont-driver--${dp.equityMultiplier >= 3 ? 'warn' : 'good'}`}>
-          {dp.driver}
-        </div>
+          <div className="dupont-flow">
+            <DuPontFactor label="Net margin" value={(dp.netMargin * 100).toFixed(1) + '%'} sub="profit per sales dollar" />
+            <span className="dupont-op">{"\u00D7"}</span>
+            <DuPontFactor label="Asset turnover" value={dp.assetTurnover.toFixed(2) + '\u00D7'} sub="sales per asset dollar" />
+            <span className="dupont-op">{"\u00D7"}</span>
+            <DuPontFactor label="Equity multiplier" value={dp.equityMultiplier.toFixed(2) + '\u00D7'} sub="leverage (assets/equity)" />
+            <span className="dupont-op">=</span>
+            <DuPontFactor label="ROE" value={(dp.roe * 100).toFixed(1) + '%'} sub="return on equity" highlight />
+          </div>
+
+          <div className={`dupont-driver dupont-driver--${dp.equityMultiplier >= 3 ? 'warn' : 'good'}`}>
+            {dp.driver}
+          </div>
+          </>
+        )}
       </Card>
     </div>
   );

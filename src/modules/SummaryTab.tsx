@@ -8,8 +8,10 @@
 // and weak on the other.
 // ============================================================
 import { useMemo } from 'react';
-import type { CompanyInput, Metric, Health } from '../lib/analysis';
-import { profitability, liquidity, leverage, efficiency } from '../lib/analysis';
+import type { CompanyInput, Metric, Health, CompanyField } from '../lib/analysis';
+import { MissingData } from '../components/MissingData';
+import { profitability, liquidity, leverage, efficiency, missingFields, reconcile, applyReconciliation } from '../lib/analysis';
+import { ReconNotice } from '../components/ReconNotice';
 import { runDcf } from '../lib/dcf';
 import { Card } from '../components/Card';
 import './SummaryTab.css';
@@ -21,18 +23,34 @@ function overall(all: Metric[]): Health {
   return 'ok';
 }
 
-export function SummaryTab({ input }: { input: CompanyInput }) {
-  const all = useMemo(
-    () => [...profitability(input), ...liquidity(input), ...leverage(input), ...efficiency(input)],
-    [input]
-  );
-  const quality = overall(all);
+// The verdict combines quality (ratios) and value (DCF). Without the
+// valuation inputs there is no "is it worth the price?" half, so the
+// combined verdict is withheld rather than half-computed.
+const VALUE_REQUIRES: readonly CompanyField[] = [
+  'operatingCashFlow', 'capex', 'totalDebt', 'cash', 'sharesOutstanding', 'sharePrice',
+];
 
+export function SummaryTab({ input }: { input: CompanyInput }) {
+  const missingValue = missingFields(input, VALUE_REQUIRES);
+  const issues = useMemo(() => reconcile(input), [input]);
+  const all = useMemo(
+    () => applyReconciliation(
+      [...profitability(input), ...liquidity(input), ...leverage(input), ...efficiency(input)],
+      issues
+    ),
+    [input, issues]
+  );
+  const rated = all.filter((m) => m.health !== null);
+  const quality = overall(rated);
+  const hasError = issues.some((i) => i.severity === 'error');
+
+  // Computed unconditionally to keep hook order stable; never rendered
+  // when `missingValue` is non-empty.
   const dcf = useMemo(() => runDcf({
-    baseFcf: Math.max(0, input.operatingCashFlow - input.capex),
+    baseFcf: Math.max(0, (input.operatingCashFlow ?? 0) - (input.capex ?? 0)),
     growth: 0.08, years: 10, terminalGrowth: 0.025, discountRate: 0.09,
-    netDebt: input.totalDebt - input.cash,
-    sharesOutstanding: input.sharesOutstanding, sharePrice: input.sharePrice,
+    netDebt: (input.totalDebt ?? 0) - (input.cash ?? 0),
+    sharesOutstanding: input.sharesOutstanding ?? 0, sharePrice: input.sharePrice ?? 0,
   }), [input]);
 
   const qualityWord = quality === 'good' ? 'a healthy, well-run business'
@@ -45,6 +63,32 @@ export function SummaryTab({ input }: { input: CompanyInput }) {
 
   const strengths = all.filter((m) => m.health === 'good').slice(0, 4);
   const concerns = all.filter((m) => m.health === 'bad').slice(0, 4);
+
+  if (missingValue.length > 0) {
+    return (
+      <div className="summary">
+        {issues.length > 0 && <ReconNotice issues={issues} />}
+        <MissingData what="the combined verdict" fields={missingValue} />
+      </div>
+    );
+  }
+
+  // Quality is half the verdict. If the ratios behind it rest on figures
+  // that contradict each other, there is no honest combined call to make.
+  if (hasError || rated.length < 4) {
+    return (
+      <div className="summary">
+        <ReconNotice issues={issues} />
+        <MissingData
+          what="the combined verdict"
+          fields={issues.flatMap((i) => (i.severity === 'error' ? i.fields : []))}
+        />
+      </div>
+    );
+  }
+
+  // Narrowed by the guard above: the DCF inputs are all present here.
+  const sharePrice = input.sharePrice as number;
 
   return (
     <div className="summary">
@@ -96,7 +140,7 @@ export function SummaryTab({ input }: { input: CompanyInput }) {
             </div>
             <div className="summary-val-row">
               <span>Market price</span>
-              <span className="tabular">${input.sharePrice.toFixed(2)}</span>
+              <span className="tabular">${sharePrice.toFixed(2)}</span>
             </div>
             <div className="summary-val-row summary-val-row--emph">
               <span>Upside / downside</span>

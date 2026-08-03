@@ -1,0 +1,91 @@
+.pb { position: relative; }
+
+.pb-trigger {
+  display: flex; flex-direction: column; align-items: flex-end; gap: 2px;
+  background: transparent; border: 1px solid var(--border);
+  border-radius: var(--r-md); padding: 8px 14px; cursor: pointer;
+  transition: border-color 160ms ease;
+}
+.pb-trigger:hover, .pb-trigger.is-open { border-color: var(--border-strong); }
+.pb-trigger:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.pb-trigger-label {
+  font-family: var(--font-mono); font-size: var(--fs-xs);
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-secondary);
+}
+/* States the control's own knowledge: which company is loaded, or that
+   what is on screen matches nothing saved. */
+.pb-trigger-state { font-size: 10.5px; color: var(--text-muted); max-width: 22ch;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.pb-panel {
+  position: absolute; right: 0; top: calc(100% + 6px); z-index: 30;
+  width: 340px; max-height: 60vh; overflow-y: auto;
+  background: var(--bg-card); border: 1px solid var(--border-strong);
+  border-radius: var(--r-md); padding: var(--card-pad);
+  display: flex; flex-direction: column; gap: var(--stack-gap);
+}
+
+.pb-save, .pb-rename { display: flex; gap: var(--s2); }
+.pb-input {
+  flex: 1; min-width: 0;
+  background: var(--bg-panel); border: 1px solid var(--border);
+  border-radius: var(--r-sm); padding: 7px 10px;
+  color: var(--text-primary); font-size: var(--fs-sm);
+}
+.pb-input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.pb-btn {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--text-secondary);
+  background: transparent; border: 1px solid var(--border);
+  border-radius: var(--r-sm); padding: 6px 12px; cursor: pointer; white-space: nowrap;
+}
+.pb-btn:hover:not(:disabled) { color: var(--text-primary); border-color: var(--border-strong); }
+.pb-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+/* Active states invert, like every other control in the suite. */
+.pb-btn--primary:not(:disabled) { background: var(--accent); border-color: var(--accent); color: var(--bg-base); }
+
+.pb-note, .pb-empty, .pb-foot {
+  font-size: 10.5px; line-height: 1.5; color: var(--text-muted);
+}
+.pb-empty { padding: var(--s3) 0; }
+.pb-foot { border-top: 1px solid var(--border); padding-top: var(--stack-gap); }
+
+.pb-list { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.pb-item {
+  display: flex; align-items: center; gap: var(--s2);
+  border-radius: var(--r-sm); padding: 2px;
+}
+.pb-item:hover { background: var(--bg-card-hover); }
+.pb-item.is-active { background: var(--accent-dim); }
+
+.pb-load {
+  flex: 1; min-width: 0;
+  display: flex; align-items: baseline; justify-content: space-between; gap: var(--s2);
+  background: transparent; border: none; cursor: pointer;
+  padding: 7px 8px; text-align: left;
+}
+.pb-name {
+  font-size: var(--fs-sm); color: var(--text-primary);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.pb-meta {
+  font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--text-muted); flex-shrink: 0;
+}
+.pb-item.is-active .pb-meta { color: var(--text-secondary); }
+
+.pb-actions { display: flex; gap: 2px; flex-shrink: 0; }
+.pb-icon {
+  font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--text-muted);
+  background: transparent; border: 1px solid transparent;
+  border-radius: var(--r-sm); padding: 4px 7px; cursor: pointer;
+}
+.pb-icon:hover { color: var(--text-primary); border-color: var(--border); }
+.pb-icon--danger { color: var(--loss); border-color: var(--loss); }
+
+/* The header becomes a two-column row once the control is in it. */
+.vantage-header {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s5);
+}

@@ -84,7 +84,7 @@ export function CrashChart({ result }: { result: CrashResult }) {
             <line x1={xAt(readM)} x2={xAt(readM)} y1={PAD_T} y2={H - PAD_B}
               stroke="var(--text-secondary)" strokeWidth="1" opacity="0.3" />
             <circle cx={xAt(readM)} cy={yAt(readPt.value)} r="3.5"
-              fill="#fff" stroke="var(--loss)" strokeWidth="2" />
+              fill="var(--loss)" stroke="var(--bg-base)" strokeWidth="2" />
           </>
         )}
 

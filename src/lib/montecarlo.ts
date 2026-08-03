@@ -15,13 +15,18 @@
 // screen/UI involved. That makes them easy to test and reason about.
 // ============================================================
 
-import { ASSET_BY_ID, correlation, type Holding } from './assets';
+import { ASSET_BY_ID, correlationMatrix, statsFor, type Holding } from './assets';
+import { DEFAULT_ASSUMPTIONS, TAIL_DOF, type Assumptions } from './settings';
 export type { Holding };
 
 export type SimulationInput = {
   holdings: Holding[];   // what the user owns
   years: number;         // how far into the future (e.g. 10)
   numPaths: number;      // how many futures to simulate (e.g. 5000)
+  // The engine's assumptions: fat-tail severity and any per-asset
+  // overrides of expected return / volatility. Optional, and the default
+  // reproduces the previously hardcoded behaviour exactly.
+  assumptions?: Assumptions;
 };
 
 export type SimulationResult = {
@@ -85,7 +90,11 @@ function randNormal(): number {
 // deviation 1 — that way our volatility inputs stay calibrated and
 // only the TAIL SHAPE changes, not the overall spread.
 // ------------------------------------------------------------------
-const T_DOF = 5; // degrees of freedom: 5 gives realistically fat tails
+// Degrees of freedom used to be a hardcoded 5. It is the single knob
+// controlling how often extreme years happen, so it is now an exposed
+// assumption (Settings -> Assumptions -> fat-tail severity). Values below
+// 3 are not offered: a Student's t has infinite variance at 2 or below,
+// which would make every volatility input meaningless.
 
 function randChiSquare(k: number): number {
   // Sum of k squared standard normals ~ chi-square with k dof.
@@ -94,11 +103,14 @@ function randChiSquare(k: number): number {
   return s;
 }
 
-function randFatTail(): number {
+function randFatTail(dof: number): number {
+  // Infinite dof IS the normal distribution; take it directly rather than
+  // approximating it with a huge chi-square draw.
+  if (!Number.isFinite(dof)) return randNormal();
   const z = randNormal();
-  const chi = randChiSquare(T_DOF);
-  const tRaw = z / Math.sqrt(chi / T_DOF);      // raw Student's t
-  const rescale = Math.sqrt((T_DOF - 2) / T_DOF); // so std dev stays ~1
+  const chi = randChiSquare(dof);
+  const tRaw = z / Math.sqrt(chi / dof);      // raw Student's t
+  const rescale = Math.sqrt((dof - 2) / dof); // so std dev stays ~1
   return tRaw * rescale;
 }
 
@@ -115,6 +127,15 @@ function randFatTail(): number {
 // don't need to memorize the math — think of L as a "mixing recipe"
 // that blends independent randoms into correlated ones.
 // ------------------------------------------------------------------
+// Cholesky only exists for a positive-definite matrix. This used to clamp
+// a non-positive diagonal to 1e-12 with a comment about floating-point
+// noise, then divide by its square root on the very next line. That turned
+// an invalid correlation matrix into a silent 1e6 multiplier on the whole
+// mixing recipe: a 10-asset portfolio reported a $9.18 QUINTILLION best
+// case, and an 11-asset one reported NaN. A wrong number that still looks
+// plausible is worse than a crash, so this throws now.
+//
+// It should never fire: correlationMatrix() repairs the matrix first.
 function choleskyDecompose(matrix: number[][]): number[][] {
   const n = matrix.length;
   const L: number[][] = Array.from({ length: n }, () => new Array(n).fill(0));
@@ -123,20 +144,21 @@ function choleskyDecompose(matrix: number[][]): number[][] {
       let sum = 0;
       for (let k = 0; k < j; k++) sum += L[i][k] * L[j][k];
       if (i === j) {
-        // Guard against tiny negative from floating point -> sqrt NaN
-        L[i][j] = Math.sqrt(Math.max(matrix[i][i] - sum, 1e-12));
+        const d = matrix[i][i] - sum;
+        if (!(d > 0)) {
+          throw new Error(
+            `choleskyDecompose: matrix is not positive definite ` +
+            `(pivot ${i} = ${d}). Build correlation matrices with ` +
+            `correlationMatrix() from assets.ts, which repairs them first.`
+          );
+        }
+        L[i][j] = Math.sqrt(d);
       } else {
         L[i][j] = (matrix[i][j] - sum) / L[j][j];
       }
     }
   }
   return L;
-}
-
-// Build the correlation matrix for just the assets in this portfolio,
-// in the given order.
-function buildCorrMatrix(assetIds: string[]): number[][] {
-  return assetIds.map((a) => assetIds.map((b) => (a === b ? 1 : correlation(a, b))));
 }
 
 // Multiply the mixing matrix L by a vector of independent draws z,
@@ -162,22 +184,25 @@ function correlate(L: number[][], z: number[]): number[] {
 function simulateOnePath(
   holdings: Holding[],
   years: number,
-  L: number[][]
+  L: number[][],
+  assumptions: Assumptions
 ): number[] {
   // Current dollars in each asset (a copy we mutate as years pass).
   let values = holdings.map((h) => h.dollars);
   const assets = holdings.map((h) => ASSET_BY_ID[h.assetId]);
+  // Resolved once per path: the user's overrides, or the built-in values.
+  const stats = assets.map((a) => statsFor(a, assumptions.assetOverrides));
+  const dof = TAIL_DOF[assumptions.tailSeverity];
 
   const path: number[] = [values.reduce((a, b) => a + b, 0)]; // year 0 = start
 
   for (let year = 0; year < years; year++) {
     // one independent FAT-TAILED draw per asset (realistic extremes)...
-    const z = assets.map(() => randFatTail());
+    const z = assets.map(() => randFatTail(dof));
     // ...blended into correlated draws by the mixing recipe.
     const correlated = correlate(L, z);
 
     for (let a = 0; a < assets.length; a++) {
-      const asset = assets[a];
       // GEOMETRIC (log-normal) returns. Real asset prices follow
       // geometric Brownian motion: they compound multiplicatively and
       // can fall steeply but NEVER below zero. We model the log-return
@@ -185,8 +210,8 @@ function simulateOnePath(
       // "volatility drag" / Itô correction, so the AVERAGE compounded
       // return still matches the asset's expected return rather than
       // drifting high. This is the textbook GBM formulation.
-      const mu = asset.expReturn;
-      const sigma = asset.volatility;
+      const mu = stats[a].expReturn;
+      const sigma = stats[a].volatility;
       const logReturn = (mu - 0.5 * sigma * sigma) + sigma * correlated[a];
       values[a] = values[a] * Math.exp(logReturn); // always > 0
     }
@@ -212,7 +237,7 @@ function percentile(sorted: number[], p: number): number {
 //    summarizes them into the bands + stats the UI needs.
 // ------------------------------------------------------------------
 export function runSimulation(input: SimulationInput): SimulationResult {
-  const { holdings, years, numPaths } = input;
+  const { holdings, years, numPaths, assumptions = DEFAULT_ASSUMPTIONS } = input;
   const active = holdings.filter((h) => h.dollars > 0 && ASSET_BY_ID[h.assetId]);
   const startValue = active.reduce((sum, h) => sum + h.dollars, 0);
 
@@ -226,13 +251,13 @@ export function runSimulation(input: SimulationInput): SimulationResult {
   }
 
   // Prepare the correlation mixing recipe ONCE (not per path — faster).
-  const corr = buildCorrMatrix(active.map((h) => h.assetId));
+  const corr = correlationMatrix(active.map((h) => h.assetId));
   const L = choleskyDecompose(corr);
 
   // Run all the paths. allPaths[i] is one future's yearly totals.
   const allPaths: number[][] = [];
   for (let i = 0; i < numPaths; i++) {
-    allPaths.push(simulateOnePath(active, years, L));
+    allPaths.push(simulateOnePath(active, years, L, assumptions));
   }
 
   // For each year, gather every path's value and compute percentiles.

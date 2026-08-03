@@ -3,11 +3,14 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--s4);
-  margin-bottom: var(--s5);
+  margin-bottom: 0;
 }
 
 .topbar-title {
-  font-size: var(--fs-xl);
+  /* Scales down on short viewports so the header does not eat the charts'
+     budget on a 13" laptop. */
+  font-size: clamp(19px, 2.6vh, 24px);
+  line-height: 1.25;
   font-weight: 600;
   color: var(--text-primary);
   letter-spacing: -0.01em;
@@ -15,8 +18,9 @@
 
 .topbar-subtitle {
   font-size: var(--fs-sm);
+  line-height: 1.3;
   color: var(--text-muted);
-  margin-top: 2px;
+  margin-top: 1px;
 }
 
 .topbar-actions {
@@ -56,7 +60,25 @@
 .pill:hover { color: var(--text-primary); }
 .pill.is-active {
   background: var(--accent);
-  color: #fff;
-  box-shadow: 0 2px 8px rgba(59,130,246,0.35);
+  color: var(--bg-base);
+  box-shadow: none;
 }
 .pill:focus-visible { outline: 2px solid var(--accent-bright); outline-offset: 2px; }
+
+/* Quiet ghost button. Deliberately understated: destructive-ish, and it
+   should not compete with the simulation pills beside it. */
+.topbar-reset {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: color 160ms ease, border-color 160ms ease;
+}
+.topbar-reset:hover { color: var(--text-primary); border-color: var(--border-strong); }
+.topbar-reset:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

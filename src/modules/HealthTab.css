@@ -14,8 +14,10 @@
   padding: 2px 0;
 }
 .health-badge--good { color: var(--gain); }
-.health-badge--ok   { color: #D4A94C; }
+.health-badge--ok   { color: var(--warn); }
 .health-badge--bad  { color: var(--loss); }
+/* No colour: a withheld verdict is not a rating on a scale. */
+.health-badge--withheld { color: var(--text-muted); }
 .health-headline-sub {
   margin-top: var(--s2);
   font-size: var(--fs-base);
@@ -77,7 +79,7 @@
   border: 1px solid var(--border);
 }
 .dupont-driver--good { background: var(--gain-dim); color: var(--text-secondary); border-color: rgba(52,211,153,0.2); }
-.dupont-driver--warn { background: rgba(212,169,76,0.1); color: var(--text-secondary); border-color: rgba(212,169,76,0.25); }
+.dupont-driver--warn { background: var(--warn-dim); color: var(--text-secondary); border-color: rgba(212,179,106,0.30); }
 
 @media (max-width: 720px) {
   .dupont-flow { flex-direction: column; }

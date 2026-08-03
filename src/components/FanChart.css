@@ -1,8 +1,28 @@
-.fan-wrap { position: relative; width: 100%; }
+/* Flex column so the plot absorbs all leftover height and the readout bar
+   keeps its natural size. The plot's box is what useElementSize measures. */
+.fan-wrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* The svg is absolutely positioned, which matters more than it looks.
+   Its viewBox is derived from this box's MEASURED size, and an svg with
+   height:100% in an auto-height parent falls back to its intrinsic aspect
+   ratio - so the measured height became the parent's min-content height,
+   which set the grid row height, which set the measured height. That loop
+   pinned the row at ~412px and blocked the dashboard from fitting. Taking
+   the svg out of flow removes it from intrinsic sizing entirely. */
+.fan-plot { position: relative; flex: 1; min-height: 0; width: 100%; }
 
 .fan {
+  position: absolute;
+  inset: 0;
   width: 100%;
-  height: auto;
+  height: 100%;
   display: block;
   cursor: crosshair;
 }
@@ -73,7 +93,7 @@
   align-items: center;
   gap: var(--s5);
   margin-top: var(--s3);
-  padding: var(--s3) var(--s4);
+  padding: var(--stack-gap) var(--s3);
   background: var(--bg-panel);
   border: 1px solid var(--border);
   border-radius: var(--r-md);

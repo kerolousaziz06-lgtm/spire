@@ -10,14 +10,30 @@
 import { useState } from 'react';
 import type { FrontierPoint } from '../lib/risk';
 import { fmtPct } from '../lib/format';
+import { useElementSize } from '../lib/hooks';
 import './EfficientFrontier.css';
 
 type Props = { cloud: FrontierPoint[]; current: FrontierPoint | null };
 
-const W = 460, H = 300, PAD_L = 44, PAD_R = 16, PAD_T = 16, PAD_B = 36;
+// Padding only — the canvas itself is measured at runtime (see below), so
+// there is no fixed viewBox to keep in sync with the layout. xAt/yAt map
+// (risk, return) onto whatever canvas we get, so the plotted data is
+// independent of the canvas size.
+const PAD_L = 44, PAD_R = 16, PAD_T = 12, PAD_B = 34;
+
+// Fallbacks for the first paint, before the plot box has been measured.
+const W0 = 900, H0 = 200;
 
 export function EfficientFrontier({ cloud, current }: Props) {
   const [hoverCurrent, setHoverCurrent] = useState(false);
+
+  // Measure the plot box and use its real pixel size as the canvas. This
+  // replaces an earlier pair of fixed WIDE/NARROW shapes chosen off a media
+  // query: that could not know the card's actual width, so the flat shape
+  // squashed the chart to ~34px once the grid collapsed to one column.
+  const { ref: plotRef, w: measuredW, h: measuredH } = useElementSize<HTMLDivElement>();
+  const W = measuredW || W0;
+  const H = measuredH || H0;
 
   if (cloud.length < 2) {
     return <div className="ef-empty">Hold at least two assets to map the risk–return frontier.</div>;
@@ -46,7 +62,10 @@ export function EfficientFrontier({ cloud, current }: Props) {
 
   return (
     <div className="ef">
-      <svg viewBox={`0 0 ${W} ${H}`} className="ef-svg" role="img"
+      {/* Own measured box: the legend row below must not count toward the
+          plot's height, so the ref wraps the svg only. */}
+      <div className="ef-plot" ref={plotRef}>
+      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="ef-svg" role="img"
         aria-label="Risk versus return scatter of possible portfolios, with the efficient frontier and your portfolio marked.">
         {/* axes */}
         <line x1={PAD_L} y1={H - PAD_B} x2={W - PAD_R} y2={H - PAD_B} stroke="var(--border-strong)" strokeWidth="1" />
@@ -89,7 +108,7 @@ export function EfficientFrontier({ cloud, current }: Props) {
             <circle cx={xAt(current.risk)} cy={yAt(current.ret)} r="9"
               fill="var(--accent-glow)" opacity="0.5" className="ef-you-halo" />
             <circle cx={xAt(current.risk)} cy={yAt(current.ret)} r="5"
-              fill="#fff" stroke="var(--accent-bright)" strokeWidth="2.5" />
+              fill="var(--accent-bright)" stroke="var(--bg-base)" strokeWidth="2.5" />
             {hoverCurrent && (
               <text x={xAt(current.risk)} y={yAt(current.ret) - 14} className="ef-you-label" textAnchor="middle">
                 you
@@ -103,6 +122,7 @@ export function EfficientFrontier({ cloud, current }: Props) {
         <text x={12} y={H / 2} className="ef-axistitle" textAnchor="middle"
           transform={`rotate(-90 12 ${H / 2})`}>Return →</text>
       </svg>
+      </div>
 
       <div className="ef-footer">
         <span className="ef-key"><span className="ef-dot ef-dot-you" /> your portfolio</span>

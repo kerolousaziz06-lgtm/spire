@@ -10,9 +10,12 @@
 //
 // Each also gets a 0..1 "level" so the UI bars know how full to draw.
 // ============================================================
-import { ASSET_BY_ID, correlation, type Holding } from './assets';
+import { ASSET_BY_ID, correlationMatrix, statsFor, type Holding } from './assets';
+import { DEFAULT_ASSUMPTIONS, type Assumptions } from './settings';
 
-const RISK_FREE = 0.02; // ~2% risk-free rate for the Sharpe ratio
+// The risk-free rate used to live here as a hardcoded 0.02. It is an
+// assumption, not a fact, so it now arrives via `assumptions` and is
+// editable in Settings. The default preserves the old value exactly.
 
 export type RiskProfile = {
   expReturn: number;
@@ -22,7 +25,10 @@ export type RiskProfile = {
   sharpeLevel: number;
 };
 
-export function computeRiskProfile(holdings: Holding[]): RiskProfile {
+export function computeRiskProfile(
+  holdings: Holding[],
+  assumptions: Assumptions = DEFAULT_ASSUMPTIONS
+): RiskProfile {
   const active = holdings.filter((h) => h.dollars > 0 && ASSET_BY_ID[h.assetId]);
   const total = active.reduce((s, h) => s + h.dollars, 0);
 
@@ -36,24 +42,30 @@ export function computeRiskProfile(holdings: Holding[]): RiskProfile {
   const assets = active.map((h) => ASSET_BY_ID[h.assetId]);
 
   // Expected return = weighted average of each asset's expected return.
-  const expReturn = assets.reduce((s, a, i) => s + weights[i] * a.expReturn, 0);
+  const stats = assets.map((a) => statsFor(a, assumptions.assetOverrides));
+  const expReturn = stats.reduce((s, st, i) => s + weights[i] * st.expReturn, 0);
 
   // Portfolio variance = double sum over assets of
   //   w_i * w_j * vol_i * vol_j * correlation(i,j).
   // This is the formula that makes diversification real: when
   // correlation between two assets is low or negative, their combined
   // variance is LESS than the weighted average of the individual ones.
+  // Read the REPAIRED matrix, not correlation() pair by pair. With the raw
+  // pairwise values this sum could come out negative, and the Math.max
+  // below hid that as an understated volatility rather than an error.
+  const corrM = correlationMatrix(assets.map((a) => a.id));
   let variance = 0;
   for (let i = 0; i < assets.length; i++) {
     for (let j = 0; j < assets.length; j++) {
-      const corr = i === j ? 1 : correlation(assets[i].id, assets[j].id);
-      variance += weights[i] * weights[j] * assets[i].volatility * assets[j].volatility * corr;
+      variance += weights[i] * weights[j] * stats[i].volatility * stats[j].volatility * corrM[i][j];
     }
   }
+  // Belt and braces now that the matrix is valid: variance cannot be
+  // negative, so this only absorbs floating-point dust at zero.
   const volatility = Math.sqrt(Math.max(variance, 0));
 
   // Sharpe ratio = (return - risk-free) / volatility.
-  const sharpe = volatility > 0 ? (expReturn - RISK_FREE) / volatility : 0;
+  const sharpe = volatility > 0 ? (expReturn - assumptions.riskFreeRate) / volatility : 0;
 
   // Convert each to a 0..1 bar level against sensible reference maxima.
   const volatilityLevel = Math.min(1, volatility / 0.25); // 25% vol = full bar
@@ -76,21 +88,33 @@ export function computeRiskProfile(holdings: Holding[]): RiskProfile {
 export type FrontierPoint = { risk: number; ret: number };
 
 // Expected return + volatility for an arbitrary set of weighted assets.
-function riskReturnForWeights(assetIds: string[], weights: number[]): FrontierPoint {
+function riskReturnForWeights(
+  assetIds: string[],
+  weights: number[],
+  assumptions: Assumptions = DEFAULT_ASSUMPTIONS
+): FrontierPoint {
   const assets = assetIds.map((id) => ASSET_BY_ID[id]);
-  const ret = assets.reduce((s, a, i) => s + weights[i] * a.expReturn, 0);
+  const stats = assets.map((a) => statsFor(a, assumptions.assetOverrides));
+  const ret = stats.reduce((s, st, i) => s + weights[i] * st.expReturn, 0);
+  // Same repaired matrix as computeRiskProfile, so the frontier cloud and
+  // the risk panel cannot disagree. It is memoised, which matters here:
+  // computeFrontier calls this 800 times per render.
+  const corrM = correlationMatrix(assetIds);
   let variance = 0;
   for (let i = 0; i < assets.length; i++) {
     for (let j = 0; j < assets.length; j++) {
-      const corr = i === j ? 1 : correlation(assets[i].id, assets[j].id);
-      variance += weights[i] * weights[j] * assets[i].volatility * assets[j].volatility * corr;
+      variance += weights[i] * weights[j] * stats[i].volatility * stats[j].volatility * corrM[i][j];
     }
   }
   return { risk: Math.sqrt(Math.max(variance, 0)), ret };
 }
 
 // Generate a cloud of random portfolios plus the current one.
-export function computeFrontier(holdings: Holding[], samples = 800): {
+export function computeFrontier(
+  holdings: Holding[],
+  samples = 800,
+  assumptions: Assumptions = DEFAULT_ASSUMPTIONS
+): {
   cloud: FrontierPoint[];
   current: FrontierPoint | null;
 } {
@@ -99,7 +123,7 @@ export function computeFrontier(holdings: Holding[], samples = 800): {
   if (ids.length < 2) {
     // With <2 assets there's no frontier to trace.
     if (ids.length === 1) {
-      const p = riskReturnForWeights(ids, [1]);
+      const p = riskReturnForWeights(ids, [1], assumptions);
       return { cloud: [p], current: p };
     }
     return { cloud: [], current: null };
@@ -111,13 +135,13 @@ export function computeFrontier(holdings: Holding[], samples = 800): {
     const raw = ids.map(() => -Math.log(Math.random() + 1e-9));
     const sum = raw.reduce((a, b) => a + b, 0);
     const w = raw.map((x) => x / sum);
-    cloud.push(riskReturnForWeights(ids, w));
+    cloud.push(riskReturnForWeights(ids, w, assumptions));
   }
 
   // The user's actual mix.
   const total = active.reduce((s, h) => s + h.dollars, 0);
   const curW = active.map((h) => h.dollars / total);
-  const current = riskReturnForWeights(ids, curW);
+  const current = riskReturnForWeights(ids, curW, assumptions);
 
   return { cloud, current };
 }

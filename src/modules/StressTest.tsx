@@ -1,11 +1,14 @@
 // ============================================================
 // StressTest.tsx — the module, now fully wired (Week 3).
 //
-// This is the "conductor." It owns two pieces of state:
-//   • holdings   — the user's portfolio (from the builder)
+// This is the "conductor." It owns the view state:
 //   • numPaths   — how many futures to simulate (from the pills)
+//   • years, viewMode, editorOpen
 //
-// Whenever either changes, useMemo re-runs the Monte Carlo engine
+// It does NOT own `holdings`. That is the user's data and lives in
+// App.tsx, above the point where this component unmounts on navigation.
+//
+// Whenever holdings or numPaths change, useMemo re-runs the engine
 // and every child (stat cards, fan chart, risk profile) receives
 // fresh real numbers. This is the reactive "cockpit": change a
 // control on the left, watch everything recompute.
@@ -24,22 +27,26 @@ import { runSimulation, type Holding } from '../lib/montecarlo';
 import { computeRiskProfile, computeFrontier } from '../lib/risk';
 import { CRASH_EVENTS, replayCrash } from '../lib/crashes';
 import { fmtMoney, fmtPctSigned, fmtPct } from '../lib/format';
+import { DEFAULT_ASSUMPTIONS, type Assumptions } from '../lib/settings';
 import './StressTest.css';
 
 
-// The portfolio the app starts with.
-const INITIAL_HOLDINGS: Holding[] = [
-  { assetId: 'us_stocks', dollars: 50000 },
-  { assetId: 'nasdaq',    dollars: 20000 },
-  { assetId: 'bonds',     dollars: 20000 },
-  { assetId: 'cash',      dollars: 10000 },
-];
-
 const DEFAULT_YEARS = 10;
 
-export function StressTest() {
-  const [holdings, setHoldings] = useState<Holding[]>(INITIAL_HOLDINGS);
-  const [numPaths, setNumPaths] = useState(5000);
+// `holdings` lives in App, not here. This component unmounts whenever the
+// user navigates to another module, so state held locally would be lost.
+// See the note at the top of App.tsx.
+type Props = {
+  holdings: Holding[];
+  onHoldings: (next: Holding[]) => void;
+  onResetHoldings: () => void;
+  // The engine assumptions from Settings. Threaded, never read from a
+  // global, so these functions stay pure and testable.
+  assumptions?: Assumptions;
+};
+
+export function StressTest({ holdings, onHoldings, onResetHoldings, assumptions = DEFAULT_ASSUMPTIONS }: Props) {
+  const [numPaths, setNumPaths] = useState(assumptions.defaultNumPaths);
   const [editorOpen, setEditorOpen] = useState(false);
   const [years, setYears] = useState(DEFAULT_YEARS);
   // Which chart to show in the center: the forward forecast, or a
@@ -50,12 +57,12 @@ export function StressTest() {
   // useMemo caches the result so re-renders (like hovering the chart)
   // don't needlessly re-simulate thousands of paths.
   const result = useMemo(
-    () => runSimulation({ holdings, years, numPaths }),
-    [holdings, years, numPaths]
+    () => runSimulation({ holdings, years, numPaths, assumptions }),
+    [holdings, years, numPaths, assumptions]
   );
 
   // Risk stats (volatility, max drawdown, Sharpe) from the same portfolio.
-  const risk = useMemo(() => computeRiskProfile(holdings), [holdings]);
+  const risk = useMemo(() => computeRiskProfile(holdings, assumptions), [holdings, assumptions]);
 
   // Deterministic crash replays — recomputed only when holdings change
   // (not random, so no need to depend on numPaths/years).
@@ -66,7 +73,7 @@ export function StressTest() {
   const activeCrash = crashResults.find((c) => c.event.id === viewMode) ?? null;
 
   // Efficient frontier: cloud of random mixes + the current portfolio.
-  const frontier = useMemo(() => computeFrontier(holdings), [holdings]);
+  const frontier = useMemo(() => computeFrontier(holdings, 800, assumptions), [holdings, assumptions]);
 
   // Brief "just recomputed" pulse on the hero number. We bump a key
   // whenever the median changes; the animation replays via that key.
@@ -82,16 +89,18 @@ export function StressTest() {
         subtitle="Simulate thousands of possible futures and replay historical crashes"
         numPaths={numPaths}
         onNumPaths={setNumPaths}
+        onReset={onResetHoldings}
+        resetLabel="Reset portfolio"
       />
 
       <div className="cockpit">
-        {/* LEFT: read-only summary that opens the editor modal */}
-        <aside className="cockpit-left">
+        {/* Read-only summary that opens the editor modal */}
+        <aside className="area-portfolio">
           <PortfolioSummary holdings={holdings} onOpen={() => setEditorOpen(true)} />
         </aside>
 
-        {/* CENTER: hero + stats + fan chart */}
-        <section className="cockpit-center">
+        {/* Hero + the three stat cards beneath it */}
+        <section className="area-hero">
           <Card glow delay={1} className="hero">
             <div className="hero-top">
               <div className="hero-label">MEDIAN PROJECTED VALUE · {years} {years === 1 ? 'YEAR' : 'YEARS'}</div>
@@ -137,7 +146,10 @@ export function StressTest() {
             <StatCard label="Chance of loss" value={fmtPct(result.probLoss)}
               hint="of ending below start" delay={4} />
           </div>
+        </section>
 
+        {/* Forward forecast, or the selected crash replay */}
+        <section className="area-fan">
           <Card delay={5} className="chart-card">
             {viewMode === 'forecast' || !activeCrash ? (
               <>
@@ -165,10 +177,10 @@ export function StressTest() {
           </Card>
         </section>
 
-        {/* RIGHT: crash replays + risk + retirement */}
-        <aside className="cockpit-right">
+        {/* Crash replays — top right, alongside the hero */}
+        <aside className="area-crash">
           <Card delay={2}>
-            <h2 className="section-title" style={{ marginBottom: 'var(--s4)' }}>Historical Crash Replay</h2>
+            <h2 className="section-title" style={{ marginBottom: 'var(--stack-gap)' }}>Historical Crash Replay</h2>
             <div className="replay-list">
               {crashResults.map((c) => (
                 <ReplayRow
@@ -184,9 +196,12 @@ export function StressTest() {
             </div>
             <p className="replay-note">Click a crisis to replay your portfolio through it.</p>
           </Card>
+        </aside>
 
+        {/* Risk readouts — left column, level with the fan chart */}
+        <aside className="area-risk">
           <Card delay={4}>
-            <h2 className="section-title" style={{ marginBottom: 'var(--s4)' }}>Risk Profile</h2>
+            <h2 className="section-title" style={{ marginBottom: 'var(--stack-gap)' }}>Risk Profile</h2>
             <div className="risk-list">
               <RiskRow label="Volatility"   value={fmtPct(risk.volatility)}   level={risk.volatilityLevel} />
               <RiskRow label="Median max drawdown" value={fmtPct(result.medianMaxDrawdown)} level={Math.min(1, result.medianMaxDrawdown / 0.5)} />
@@ -194,27 +209,38 @@ export function StressTest() {
             </div>
           </Card>
 
+        </aside>
+
+        {/* Retirement — bottom left, extended to meet the frontier's bottom */}
+        <aside className="area-money">
           <RetirementCard />
         </aside>
-      </div>
 
-      {/* ---- DEEPER ANALYSIS: correlation heatmap + efficient frontier ---- */}
-      <div className="analysis-row">
-        <Card delay={1} className="analysis-card">
-          <div className="section-head">
-            <h2 className="section-title">How Your Assets Move Together</h2>
-            <span className="section-note">correlation · hover a cell</span>
-          </div>
-          <CorrelationHeatmap holdings={holdings} />
-        </Card>
+        {/* Narrow slot, middle right. The frontier goes here: it is a fixed
+            scatter of the same cloud whatever the portfolio holds, so it
+            reads fine at 360px and never grows. */}
+        <section className="area-sidechart">
+          <Card delay={6}>
+            <div className="section-head">
+              <h2 className="section-title">Risk vs. Return Frontier</h2>
+              <span className="section-note">Modern Portfolio Theory</span>
+            </div>
+            <EfficientFrontier cloud={frontier.cloud} current={frontier.current} />
+          </Card>
+        </section>
 
-        <Card delay={2} className="analysis-card">
-          <div className="section-head">
-            <h2 className="section-title">Risk vs. Return Frontier</h2>
-            <span className="section-note">Modern Portfolio Theory</span>
-          </div>
-          <EfficientFrontier cloud={frontier.cloud} current={frontier.current} />
-        </Card>
+        {/* Wide bottom slot. The correlation matrix goes here because it is
+            the one chart whose size scales with the portfolio — it draws an
+            N x N grid, one row and column per holding, so it needs the width. */}
+        <section className="area-widechart">
+          <Card delay={7}>
+            <div className="section-head">
+              <h2 className="section-title">How Your Assets Move Together</h2>
+              <span className="section-note">correlation · hover a cell</span>
+            </div>
+            <CorrelationHeatmap holdings={holdings} />
+          </Card>
+        </section>
       </div>
 
       {/* The editor modal — only rendered when open. Save commits the
@@ -222,7 +248,7 @@ export function StressTest() {
       {editorOpen && (
         <PortfolioEditor
           holdings={holdings}
-          onSave={(next) => { setHoldings(next); setEditorOpen(false); }}
+          onSave={(next) => { onHoldings(next); setEditorOpen(false); }}
           onClose={() => setEditorOpen(false)}
         />
       )}

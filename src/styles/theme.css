@@ -34,6 +34,14 @@
   --s1: 4px;  --s2: 8px;  --s3: 12px; --s4: 16px;
   --s5: 24px; --s6: 32px; --s7: 48px; --s8: 64px;
 
+  /* Vertical rhythm that tightens on short screens.
+     The dashboard is sized to fit one viewport, so on a 900px-tall laptop
+     fixed 24px padding on seven cards costs more than the charts can spare.
+     These scale with viewport height and cap at the original values. */
+  --card-pad: clamp(11px, 1.6vh, 24px);
+  --stack-gap: clamp(6px, 1.2vh, 16px);   /* vertical gaps inside cards */
+  --grid-gap: clamp(12px, 1.8vh, 24px);
+
   /* Radius */
   --r-sm: 8px; --r-md: 12px; --r-lg: 16px; --r-xl: 20px;
 
@@ -68,12 +76,19 @@ body {
 /* Tabular figures wherever numbers appear — stops layout jitter */
 .tabular { font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
 
-/* Respect users who prefer less motion */
+/* Respect users who prefer less motion, and let Settings force it on for
+   anyone whose OS preference is off but who still wants it still. */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
+}
+body.reduce-motion *,
+body.reduce-motion *::before,
+body.reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  transition-duration: 0.01ms !important;
 }
 
 /* Scrollbars matching the dark theme */
@@ -89,73 +104,122 @@ body {
 }
 
 /* ============================================================
-   V2 THEME LAYER — sleek/modern pass.
-   Warm-amber accent, gradient depth, glass, editorial + mono type.
-   Added on top so we can tune the new look in one place.
+   TERMINAL THEME LAYER — the Landing page's look, suite-wide.
+
+   Dark brown ground, bone ink, hairline rules, mono labels. Taken
+   straight from .ed in Landing.css so all three modules read as one
+   product. Replaces the red-to-white ombre and the glassmorphic cards.
+
+   Structure is monochrome on purpose: the only hues in the app are
+   semantic (gain / loss / average, plus the correlation scale). That is
+   what gives the terminal feel — information carries colour, decoration
+   does not.
+
+   Everything below is a token override, which is why it reaches both
+   MonteVue and Vantage without editing either module.
    ============================================================ */
 :root {
-  /* Warm metallic accent (replaces blue as the star) */
-  --gold:        #E8B15C;
-  --gold-bright: #F5C978;
-  --gold-dim:    rgba(232,177,92,0.12);
-  --gold-glow:   rgba(232,177,92,0.30);
+  /* --- Ground and surfaces. Flat, no gradient, no blur. --- */
+  --bg-base:       #17140F;   /* the ground, from Landing's --ground */
+  --bg-card:       #1C1811;   /* cards sit just above it */
+  --bg-card-hover: #262019;
+  --bg-panel:      #211C15;   /* inner chips, tracks, inputs */
 
-  /* Electric edge colors (photo 2 vibe) — used sparingly for glow */
-  --electric-1: #7C5CFF;   /* violet */
-  --electric-2: #3BE0C0;   /* teal-green */
+  /* Hairlines do the structural work that card fills used to. */
+  --border:        rgba(236, 231, 219, 0.13);
+  --border-strong: rgba(236, 231, 219, 0.26);
 
-  /* Glass surfaces */
-  --glass-bg:     rgba(22, 26, 34, 0.55);
-  --glass-border: rgba(255,255,255,0.10);
-  --glass-blur:   16px;
+  /* --- Ink, from Landing's --light / --light-soft / --light-faint --- */
+  --text-primary:   #ECE7DB;
+  --text-secondary: rgba(236, 231, 219, 0.68);
+  --text-muted:     rgba(236, 231, 219, 0.56);   /* 0.46 measured 3.98:1; 0.56 clears AA 4.5 */
 
-  /* Fonts */
-  --font-display: 'Instrument Serif', Georgia, serif;   /* editorial headlines */
-  --font-grotesk: 'Space Grotesk', 'Inter', sans-serif; /* modern sans headings */
-  --font-mono:    'JetBrains Mono', 'SF Mono', monospace; /* terminal numbers */
+  /* --- Accent: the bone itself. Active states invert rather than
+         colour in, which is the terminal move. --- */
+  --accent:        #ECE7DB;
+  --accent-bright: #FFFDF7;
+  --accent-dim:    rgba(236, 231, 219, 0.10);
+  --accent-glow:   rgba(236, 231, 219, 0.20);
+
+  /* --- Semantic hues: the only colour in the app. Desaturated so they
+         sit in the palette instead of shouting out of it. Always paired
+         with an arrow, per the accessibility rule. --- */
+  --gain:     #9CBF7F;
+  --loss:     #D98E6A;
+  --warn:     #D4B36A;   /* the "average" verdict; was a hardcoded #D4A94C */
+  --gain-dim: rgba(156, 191, 127, 0.14);
+  --loss-dim: rgba(217, 142, 106, 0.14);
+  --warn-dim: rgba(212, 179, 106, 0.14);
+
+  /* Correlation scale needs two hues to read as divergent. */
+  --corr-together: 140, 166, 168;   /* cool slate */
+  --corr-opposite: 212, 179, 106;   /* brass */
+
+  /* Flat elevation. A drawn border reads sharper than a soft shadow. */
+  --shadow-card: none;
+  --shadow-glow: 0 0 0 1px var(--border-strong);
+
+  /* Editorial/terminal geometry: near-square corners, not pill-soft.
+     Landing has no rounded cards at all. */
+  --r-sm: 3px; --r-md: 4px; --r-lg: 6px; --r-xl: 8px;
+
+  --font-grotesk: 'Space Grotesk', 'Inter', system-ui, sans-serif;
+  --font-mono:    'JetBrains Mono', 'SF Mono', ui-monospace, monospace;
 }
 
-/* Richer background: deep near-black with a warm+cool gradient wash */
-body.v2 {
-  background:
-    radial-gradient(1000px 600px at 12% -8%, rgba(232,177,92,0.06), transparent 55%),
-    radial-gradient(900px 600px at 100% 5%, rgba(124,92,255,0.07), transparent 55%),
-    radial-gradient(700px 500px at 50% 110%, rgba(59,224,192,0.04), transparent 60%),
-    #08090C;
-  background-attachment: fixed;
+/* Flat ground. The ombre gradient is gone. */
+.app-shell { background: var(--bg-base); }
+body, body.v2 {
+  background: var(--bg-base);
+  background-image: none;
+  font-family: var(--font-grotesk);
 }
 
-/* Mono numbers everywhere the .tabular class is used, in v2 */
-body.v2 .tabular { font-family: var(--font-mono); letter-spacing: -0.02em; }
+/* Mono numbers everywhere .tabular is used */
+body.v2 .tabular { font-family: var(--font-mono); letter-spacing: -0.01em; }
 
-/* Glass card treatment (opt-in via .glass) */
-.glass {
-  background: var(--glass-bg) !important;
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
-  border: 1px solid var(--glass-border) !important;
+/* ---- Cards: flat panels with a hairline, no glass ---- */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
 }
-
-/* Electric edge glow (opt-in via .electric) */
-.electric {
-  position: relative;
-}
-.electric::after {
-  content: '';
-  position: absolute; inset: 0;
-  border-radius: inherit;
-  padding: 1px;
-  background: linear-gradient(135deg, var(--electric-1), var(--electric-2));
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor; mask-composite: exclude;
-  opacity: 0.6;
-  pointer-events: none;
+.card--glow {
+  background: var(--bg-card);
+  border: 1px solid var(--border-strong);
+  box-shadow: none;
 }
 
-/* Count-up + reveal helpers */
-@keyframes revealUp {
-  from { opacity: 0; transform: translateY(24px); }
-  to   { opacity: 1; transform: translateY(0); }
+/* ---- Small labels go mono, uppercase, wide-tracked — the Landing's
+        marginalia treatment, which is most of the terminal feel ---- */
+.statcard-label,
+.hero-label,
+.section-note,
+.topbar-label,
+.fan-ro-year,
+.fan-ro-label,
+.ret-hero-note,
+.replay-recovery,
+.heat-collabel,
+.heat-rowlabel {
+  font-family: var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
-.reveal { opacity: 0; }
-.reveal.is-visible { animation: revealUp 700ms cubic-bezier(0.16,1,0.3,1) forwards; }
+
+/* Section titles stay in the display face, tightened like the Landing's. */
+.section-title { font-family: var(--font-grotesk); letter-spacing: -0.01em; }
+
+/* The sidebar is a rail with a hairline, matching Landing's topbar rule. */
+.sidebar {
+  background: var(--bg-base);
+  border-right: 1px solid var(--border);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* Scrollbars in bone */
+::-webkit-scrollbar-thumb { background: rgba(236, 231, 219, 0.18); }
+::-webkit-scrollbar-thumb:hover { background: rgba(236, 231, 219, 0.30); }
