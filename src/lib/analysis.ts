@@ -349,6 +349,45 @@ export function profitability(c: CompanyInput): Metric[] {
     ...verdictify(rate(roe, [0.15, 0.08], true), 'ROE'), inputs: ['netIncome', 'shareholdersEquity'], higherIsBetter: true,
   });
 
+  // ---- ROIC: the return on capital actually employed ----
+  //
+  // The counterweight to ROE. ROE divides by equity, so a company funded
+  // mostly by debt shows a huge one without being any better at its job.
+  // ROIC divides by ALL the capital in the business, so borrowing cannot
+  // flatter it. Where the two diverge sharply, the headline ROE is
+  // leverage rather than performance.
+  //
+  // Neither input is collected directly; both derive from figures already
+  // entered, which is why this needs no new field:
+  //   NOPAT            = operating income x (1 - effective tax rate)
+  //   effective tax    = (pre-tax income - net income) / pre-tax income
+  //   pre-tax income   = operating income - interest expense
+  //   invested capital = debt + equity - cash   (cash is not operating)
+  const pretax = has(c.operatingIncome, c.interestExpense)
+    ? (c.operatingIncome as number) - (c.interestExpense as number) : null;
+  const effectiveTax = pretax !== null && pretax > 0 && c.netIncome !== null
+    ? (pretax - (c.netIncome as number)) / pretax : null;
+  const investedCapital = has(c.totalDebt, c.shareholdersEquity, c.cash)
+    ? (c.totalDebt as number) + (c.shareholdersEquity as number) - (c.cash as number) : null;
+  // A derived tax rate outside 0-100% means the inputs do not describe a
+  // taxpaying company, so the metric is skipped rather than shown.
+  const roic = effectiveTax !== null && effectiveTax >= 0 && effectiveTax < 1
+    && investedCapital !== null && investedCapital > 0 && c.operatingIncome !== null
+    ? ((c.operatingIncome as number) * (1 - effectiveTax)) / investedCapital : null;
+  if (roic !== null) out.push({
+    key: 'roic', label: 'Return on invested capital (ROIC)', value: roic, display: pct(roic),
+    meaning: `For every $1 of capital actually working in the business, it earns ${(roic * 100).toFixed(0)}\u00A2 after tax. Debt cannot flatter this the way it flatters ROE${
+      roe !== null && roe > roic * 1.5
+        ? `, and here the gap is wide: ROE of ${pct(roe)} against ROIC of ${pct(roic)} says most of that headline number is borrowed money, not operating skill.`
+        : roe !== null
+          ? `, and here the two are close, so the returns are earned rather than leveraged.`
+          : '.'
+    }`,
+    ...verdictify(rate(roic, [0.15, 0.08], true), 'ROIC'),
+    inputs: ['operatingIncome', 'interestExpense', 'netIncome', 'totalDebt', 'shareholdersEquity', 'cash'],
+    higherIsBetter: true,
+  });
+
   const roa = ratio(c.netIncome, c.totalAssets);
   if (roa !== null) out.push({
     key: 'roa', label: 'Return on assets (ROA)', value: roa, display: pct(roa),

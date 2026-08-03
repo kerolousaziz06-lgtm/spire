@@ -18,7 +18,7 @@ import { runSimulation } from '../src/lib/montecarlo';
 import { DEFAULT_ASSUMPTIONS, TAIL_DOF, type Assumptions } from '../src/lib/settings';
 import { computeRiskProfile, computeFrontier } from '../src/lib/risk';
 import { CRASH_EVENTS, replayCrash } from '../src/lib/crashes';
-import { dupont, multiples, SAMPLE_INPUT } from '../src/lib/analysis';
+import { dupont, multiples, profitability, SAMPLE_INPUT } from '../src/lib/analysis';
 import { runDcf } from '../src/lib/dcf';
 import { runLbo, SAMPLE_LBO } from '../src/lib/lbo';
 import { runMna, type MnaCompany, type MnaDeal } from '../src/lib/mna';
@@ -452,4 +452,47 @@ console.log('='.repeat(74));
   // No market data at all -> nothing at all, no crash
   const noMkt = multiples({ ...c, sharePrice: null, sharesOutstanding: null });
   console.log(`  no share price  multiples returned: ${noMkt.length}  ${noMkt.length === 0 ? 'PASS' : 'FAIL'}`);
+}
+
+
+console.log('\n' + '='.repeat(74));
+console.log('I. ROIC, against a hand-computed case');
+console.log('='.repeat(74));
+{
+  const c = SAMPLE_INPUT;
+  const m = profitability(c);
+  const roic = m.find((x) => x.key === 'roic');
+  const roe = m.find((x) => x.key === 'roe');
+
+  //   pre-tax income   = 123 - 4              = 119
+  //   taxes            = 119 - 94             = 25
+  //   effective tax    = 25 / 119             = 0.2100840336
+  //   NOPAT            = 123 x (94/119)       = 97.1596638655
+  //   invested capital = 107 + 57 - 30        = 134
+  //   ROIC             = 97.1596638655 / 134  = 0.7250721184
+  const handTax = 25 / 119;
+  const handNopat = 123 * (1 - handTax);
+  const handRoic = handNopat / 134;
+  console.log(`  effective tax   ${pct(handTax, 4)}  (119 pre-tax, 25 of tax)`);
+  console.log(`  NOPAT           ${f(handNopat, 6)}`);
+  console.log(`  invested cap    134  (107 debt + 57 equity - 30 cash)`);
+  console.log(`  ROIC            ${f(roic!.value, 8)}  hand: ${f(handRoic, 8)}  ${Math.abs(roic!.value - handRoic) < 1e-9 ? 'PASS' : 'FAIL'}`);
+  console.log(`  verdict         ${roic!.display} ${roic!.verdict}`);
+
+  // The whole point of the metric: it should expose the leverage in ROE.
+  console.log(`\n  ROE  ${roe!.display}   vs   ROIC ${roic!.display}`);
+  console.log(`  ROE is ${(roe!.value / roic!.value).toFixed(1)}x ROIC -> the headline is mostly leverage  ${roe!.value > roic!.value * 1.5 ? 'PASS (gap called out in the meaning text)' : 'FAIL'}`);
+
+  // Guards
+  const noInt = profitability({ ...c, interestExpense: null });
+  console.log(`\n  interest blank      ROIC present? ${noInt.some((x) => x.key === 'roic') ? 'yes FAIL' : 'no  PASS (cannot derive the tax rate)'}`);
+  const loss = profitability({ ...c, netIncome: 200 });   // net income above pre-tax -> negative tax
+  console.log(`  net > pre-tax       ROIC present? ${loss.some((x) => x.key === 'roic') ? 'yes FAIL' : 'no  PASS (derived tax rate < 0)'}`);
+  const noCap = profitability({ ...c, totalDebt: 0, shareholdersEquity: 10, cash: 500 });
+  console.log(`  negative capital    ROIC present? ${noCap.some((x) => x.key === 'roic') ? 'yes FAIL' : 'no  PASS'}`);
+
+  // An unlevered company: ROE and ROIC should nearly agree.
+  const flat = profitability({ ...c, totalDebt: 0, interestExpense: 0, shareholdersEquity: 335, cash: 30 });
+  const fr = flat.find((x) => x.key === 'roic')!, fe = flat.find((x) => x.key === 'roe')!;
+  console.log(`\n  debt-free variant   ROE ${fe.display}  ROIC ${fr.display}  gap ${(fe.value / fr.value).toFixed(2)}x  ${fe.value / fr.value < 1.5 ? 'PASS (no leverage, so they converge)' : 'FAIL'}`);
 }
