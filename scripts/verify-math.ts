@@ -22,7 +22,7 @@ import { dupont, multiples, profitability, SAMPLE_INPUT } from '../src/lib/analy
 import { runDcf } from '../src/lib/dcf';
 import { runLbo, SAMPLE_LBO } from '../src/lib/lbo';
 import { runMna, type MnaCompany, type MnaDeal } from '../src/lib/mna';
-import { computeMonth, buildFlow, flowImbalance, emptyMonth, type MonthEntry } from '../src/lib/budget';
+import { SAMPLE_MONTH as SAMPLE_MONTH_K, computeMonth, buildFlow, flowImbalance, emptyMonth, computeSeries, annualSavings, applyWhatIf, rateSavings, rateCategory, runway, reviveBudget, SAMPLE_BUDGET, type MonthEntry } from '../src/lib/budget';
 
 function mulberry32(a: number) {
   return function () {
@@ -625,3 +625,94 @@ const EMPTY = computeMonth(emptyMonth('2026-10'));
 const eg = buildFlow(EMPTY);
 const anyNaN = [EMPTY.totalIncome, EMPTY.totalExpenses, EMPTY.savings, ...eg.nodes.map((n) => n.share)].some((v) => !Number.isFinite(v));
 console.log(`\nempty month: ${eg.nodes.length} nodes, hasData=${EMPTY.hasData}, any NaN/Infinity? ${anyNaN ? 'yes FAIL' : 'no  PASS'}`);
+
+console.log('\n' + '='.repeat(74));
+console.log('K. Personal finance — series, what-if, verdicts, storage');
+console.log('='.repeat(74));
+
+const ser = computeSeries(SAMPLE_BUDGET.months);
+const entered = ser.months.filter((m) => m.hasData);
+const sumIn = entered.reduce((s, m) => s + m.totalIncome, 0);
+const sumOut = entered.reduce((s, m) => s + m.totalExpenses, 0);
+
+console.log(`months entered    ${entered.length}`);
+console.log(`avg income        ${f(ser.avgIncome, 2)}   hand: ${f(sumIn / entered.length, 2)}   ${okc(ser.avgIncome, sumIn / entered.length, 1e-9)}`);
+console.log(`avg expenses      ${f(ser.avgExpenses, 2)}   hand: ${f(sumOut / entered.length, 2)}   ${okc(ser.avgExpenses, sumOut / entered.length, 1e-9)}`);
+console.log(`annual savings    ${f(annualSavings(ser), 2)}   = avgSavings x 12   ${okc(annualSavings(ser), ser.avgSavings * 12, 1e-9)}`);
+
+// The overall rate is the period's, not the mean of the monthly rates.
+// Averaging rates weights a lean month the same as a fat one.
+const meanOfRates = entered.reduce((s, m) => s + (m.savingsRate ?? 0), 0) / entered.length;
+console.log(`\noverall rate      ${pct(ser.overallSavingsRate!, 4)}  = (sum in - sum out) / sum in   ${okc(ser.overallSavingsRate!, (sumIn - sumOut) / sumIn, 1e-12)}`);
+console.log(`mean of rates     ${pct(meanOfRates, 4)}  <- NOT what is reported`);
+console.log(`  they differ by ${pct(Math.abs(ser.overallSavingsRate! - meanOfRates), 4)}  ${Math.abs(ser.overallSavingsRate! - meanOfRates) > 1e-6 ? 'PASS (the distinction is real on this data)' : 'inconclusive'}`);
+
+// The sample must exercise the deficit path, or the negative-savings
+// geometry is never run before a user hits it.
+const kNeg = ser.months.filter((m) => m.savings < 0);
+console.log(`\nsample contains ${kNeg.length} deficit month(s)   ${kNeg.length >= 1 ? 'PASS' : 'FAIL (the deficit path would ship untested)'}`);
+
+// ---- what-if ----
+const kBase = computeMonth(SAMPLE_MONTH_K);
+const kCut = computeMonth(applyWhatIf(SAMPLE_MONTH_K, { restaurants: 0.5, vacation: 0.5 }));
+const handDrop = 500 * 0.5 + 900 * 0.5;
+console.log(`\nwhat-if: halve restaurants (500) and vacation (900)`);
+console.log(`  expenses ${f(kBase.totalExpenses, 2)} -> ${f(kCut.totalExpenses, 2)}   drop ${f(kBase.totalExpenses - kCut.totalExpenses, 2)}  hand: ${f(handDrop, 2)}  ${okc(kBase.totalExpenses - kCut.totalExpenses, handDrop, 1e-9)}`);
+console.log(`  savings  ${f(kBase.savings, 2)} -> ${f(kCut.savings, 2)}   rate ${pct(kBase.savingsRate!, 2)} -> ${pct(kCut.savingsRate!, 2)}`);
+console.log(`  income unchanged                      ${okc(kCut.totalIncome, kBase.totalIncome, 1e-9)}`);
+
+// A slider on rent implies a choice that is not on the table this month.
+const onFixed = computeMonth(applyWhatIf(SAMPLE_MONTH_K, { rent_mortgage: 0.5 }));
+console.log(`  a fixed line refuses to move          ${okc(onFixed.totalExpenses, kBase.totalExpenses, 1e-9)}  (rent_mortgage is fixed)`);
+
+// What-if goes through applyWhatIf -> computeMonth -> buildFlow, the same
+// path as real data, so the chart cannot disagree with the stat row.
+const cutFlow = buildFlow(kCut);
+console.log(`  adjusted graph still balances        ${okc(flowImbalance(cutFlow), 0, 1e-6)}`);
+
+// ---- verdict bands ----
+console.log('');
+for (const r of [-0.05, 0.04, 0.14, 0.35]) {
+  const v = rateSavings(r)!;
+  console.log(`  savings rate ${pct(r, 0).padStart(6)} -> ${v.health.padEnd(4)} "${v.label}"`);
+}
+console.log(`  no income          -> ${rateSavings(null) === null ? 'null  PASS (no rate to judge)' : 'FAIL'}`);
+
+const housing = kBase.categories.find((c) => c.id === 'housing')!;
+const hv = rateCategory(housing, kBase.totalIncome)!;
+console.log(`\n  Housing ${f(housing.total, 0)} of ${f(kBase.totalIncome, 0)} = ${pct(housing.total / kBase.totalIncome, 1)} -> "${hv.label}"  ${hv.meaning}`);
+console.log(`  no income          -> ${rateCategory(housing, 0) === null ? 'null  PASS' : 'FAIL'}`);
+
+// ---- runway ----
+console.log(`\nrunway 24,000 / ${f(ser.avgExpenses, 2)} = ${f(runway(24000, ser.avgExpenses)!, 4)} months   ${okc(runway(24000, ser.avgExpenses)!, 24000 / ser.avgExpenses, 1e-9)}`);
+console.log(`  no cash entered    -> ${runway(null, 1000) === null ? 'null  PASS' : 'FAIL'}`);
+console.log(`  zero expenses      -> ${runway(1000, 0) === null ? 'null  PASS (no divide by zero)' : 'FAIL'}`);
+
+// ---- the reviver: storage fails by SUCCEEDING with the wrong shape ----
+console.log('');
+const hostile: [string, unknown][] = [
+  ['not an object', 42],
+  ['no months array', { cashOnHand: 5 }],
+  ['empty months', { months: [] }],
+  ['bad month key', { months: [{ month: 'May', income: {}, spend: {} }] }],
+  ['all months invalid', { months: [{ month: 'nope' }, null] }],
+];
+for (const [name, raw] of hostile) {
+  const out = reviveBudget(raw, SAMPLE_BUDGET);
+  console.log(`  ${name.padEnd(20)} -> ${out === null ? 'rejected  PASS' : 'ACCEPTED  FAIL'}`);
+}
+
+// Values that are individually wrong are dropped, not the whole payload.
+const kPartial = reviveBudget({
+  months: [{ month: '2026-05', income: { paycheck: 100, business: 'x', bogus: 9 }, spend: { groceries: -5, coffee: 20 } }],
+  cashOnHand: -1,
+}, SAMPLE_BUDGET);
+console.log(`\n  a month with junk in it survives, junk removed:`);
+console.log(`    income kept      ${JSON.stringify(kPartial?.months[0].income)}   ${JSON.stringify(kPartial?.months[0].income) === '{"paycheck":100}' ? 'PASS' : 'FAIL'}`);
+console.log(`    negative dropped ${JSON.stringify(kPartial?.months[0].spend)}   ${JSON.stringify(kPartial?.months[0].spend) === '{"coffee":20}' ? 'PASS' : 'FAIL'}`);
+console.log(`    unknown id dropped                              ${kPartial && !('bogus' in kPartial.months[0].income) ? 'PASS' : 'FAIL'}`);
+console.log(`    negative cash -> fallback ${kPartial?.cashOnHand}   ${kPartial?.cashOnHand === SAMPLE_BUDGET.cashOnHand ? 'PASS' : 'FAIL'}`);
+
+// A revived payload must still satisfy the identities.
+const kRev = computeMonth(reviveBudget(JSON.parse(JSON.stringify(SAMPLE_BUDGET)), SAMPLE_BUDGET)!.months[4]);
+console.log(`\n  round-tripped through JSON: savings ${f(kRev.savings, 2)}  ${okc(kRev.savings, 2034, 1e-9)}  graph balances ${okc(flowImbalance(buildFlow(kRev)), 0, 1e-6)}`);

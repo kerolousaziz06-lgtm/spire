@@ -466,18 +466,16 @@ export function rateCategory(c: CategoryTotal, totalIncome: number): Verdict | n
   if (totalIncome <= 0) return null;
   const [lo, hi] = CATEGORY_BY_ID[c.id].typical;
   const share = c.total / totalIncome;
-  const band = `typical range ${(lo * 100).toFixed(0)}–${(hi * 100).toFixed(0)}% of income`;
+  const band = `${(lo * 100).toFixed(0)}–${(hi * 100).toFixed(0)}%`;
+  const got = `${(share * 100).toFixed(1)}% of income`;
   if (share > hi) return {
-    health: 'bad', label: 'high',
-    meaning: `${(share * 100).toFixed(1)}% of income, above the ${band.replace('typical range ', '')}.`,
+    health: 'bad', label: 'high', meaning: `${got}, against a typical ${band}.`,
   };
   if (share < lo) return {
-    health: 'good', label: 'low',
-    meaning: `${(share * 100).toFixed(1)}% of income, below the ${band.replace('typical range ', '')}.`,
+    health: 'good', label: 'low', meaning: `${got}, under the typical ${band}.`,
   };
   return {
-    health: 'ok', label: 'normal',
-    meaning: `${(share * 100).toFixed(1)}% of income, inside the ${band.replace('typical range ', '')}.`,
+    health: 'ok', label: 'normal', meaning: `${got}, inside the typical ${band}.`,
   };
 }
 
@@ -508,4 +506,137 @@ export const SAMPLE_MONTH: MonthEntry = {
   },
 };
 
-export const SAMPLE_BUDGET: BudgetData = { months: [SAMPLE_MONTH], cashOnHand: 24000 };
+// A few months of history, so the cash-flow chart has a shape and the
+// run rate is an average rather than one reading. February is deliberately
+// a deficit month: the diagram has to handle a negative savings figure,
+// and a sample that only ever shows good months would never exercise it.
+function shift(base: MonthEntry, month: MonthKey, income: number, spend: number): MonthEntry {
+  const scale = (rec: Record<string, number | null | undefined>, k: number) =>
+    Object.fromEntries(
+      Object.entries(rec).map(([id, v]) => [id, typeof v === 'number' ? Math.round(v * k) : v])
+    );
+  return {
+    month,
+    income: scale(base.income, income) as MonthEntry['income'],
+    spend: scale(base.spend, spend) as MonthEntry['spend'],
+  };
+}
+
+export const SAMPLE_BUDGET: BudgetData = {
+  months: [
+    shift(SAMPLE_MONTH, '2026-01', 0.97, 0.94),
+    shift(SAMPLE_MONTH, '2026-02', 0.82, 1.19),   // low income, holiday spending
+    shift(SAMPLE_MONTH, '2026-03', 1.01, 0.98),
+    shift(SAMPLE_MONTH, '2026-04', 0.99, 1.05),
+    SAMPLE_MONTH,
+  ],
+  cashOnHand: 24000,
+};
+
+// ---- Across months -------------------------------------------
+
+export type Series = {
+  months: MonthTotals[];          // oldest first
+  avgIncome: number;
+  avgExpenses: number;
+  avgSavings: number;
+  // Savings rate of the WHOLE period, not the mean of the monthly rates.
+  // Averaging rates weights a $500 month the same as a $9,000 one.
+  overallSavingsRate: number | null;
+};
+
+export function computeSeries(entries: MonthEntry[]): Series {
+  const months = [...entries]
+    .sort((a, b) => a.month.localeCompare(b.month))
+    .map(computeMonth);
+
+  const withData = months.filter((m) => m.hasData);
+  const n = withData.length || 1;
+  const income = withData.reduce((s, m) => s + m.totalIncome, 0);
+  const expenses = withData.reduce((s, m) => s + m.totalExpenses, 0);
+
+  return {
+    months,
+    avgIncome: income / n,
+    avgExpenses: expenses / n,
+    avgSavings: (income - expenses) / n,
+    overallSavingsRate: income > 0 ? (income - expenses) / income : null,
+  };
+}
+
+/** Twelve months at the current run rate. Feeds MonteVue's retirement engine. */
+export function annualSavings(s: Series): number {
+  return s.avgSavings * 12;
+}
+
+// ---- What-if -------------------------------------------------
+
+// A multiplier per subcategory: 0.7 means "spend 30% less on this".
+export type WhatIf = Partial<Record<SubcategoryId, number>>;
+
+/**
+ * Re-run a month with some lines scaled. Returns a MonthEntry, not
+ * totals, so everything downstream (the Sankey, the verdicts, the
+ * savings rate) recomputes through exactly the same path as real data.
+ * Two code paths for "the numbers" is how a displayed figure drifts from
+ * the one actually used.
+ *
+ * Only VARIABLE lines are adjustable. Offering a slider on rent implies a
+ * choice that is not on the table this month, and a savings rate built on
+ * pretending otherwise is worth nothing.
+ */
+export function applyWhatIf(entry: MonthEntry, what: WhatIf): MonthEntry {
+  const spend: MonthEntry['spend'] = { ...entry.spend };
+  for (const [id, mult] of Object.entries(what)) {
+    const sub = SUBCATEGORY_BY_ID[id];
+    if (!sub || sub.fixed) continue;
+    const base = spend[id];
+    if (typeof base !== 'number' || !isFinite(base)) continue;
+    if (typeof mult !== 'number' || !isFinite(mult)) continue;
+    spend[id] = Math.max(0, base * Math.max(0, mult));
+  }
+  return { ...entry, spend };
+}
+
+export function isWhatIfActive(what: WhatIf): boolean {
+  return Object.values(what).some((v) => typeof v === 'number' && Math.abs(v - 1) > 1e-9);
+}
+
+// ---- Persistence reviver -------------------------------------
+
+/**
+ * Storage can fail in the one way that matters: succeeding with the wrong
+ * shape. Anything that does not survive this becomes a null, and nulls are
+ * skipped when summing, so a corrupt file degrades to a blank month rather
+ * than to a wrong total.
+ */
+export function reviveBudget(raw: unknown, fallback: BudgetData): BudgetData | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const r = raw as Partial<BudgetData>;
+  if (!Array.isArray(r.months)) return null;
+
+  const num = (v: unknown): number | null =>
+    typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v : null;
+
+  const months: MonthEntry[] = [];
+  for (const m of r.months) {
+    if (!m || typeof m !== 'object') continue;
+    const e = m as Partial<MonthEntry>;
+    if (typeof e.month !== 'string' || !/^\d{4}-\d{2}$/.test(e.month)) continue;
+
+    const income: MonthEntry['income'] = {};
+    for (const s of INCOME_SOURCES) {
+      const v = num((e.income as Record<string, unknown>)?.[s.id]);
+      if (v !== null) income[s.id] = v;
+    }
+    const spend: MonthEntry['spend'] = {};
+    for (const s of SUBCATEGORIES) {
+      const v = num((e.spend as Record<string, unknown>)?.[s.id]);
+      if (v !== null) spend[s.id] = v;
+    }
+    months.push({ month: e.month, income, spend });
+  }
+
+  if (months.length === 0) return null;
+  return { months, cashOnHand: num(r.cashOnHand) ?? fallback.cashOnHand };
+}

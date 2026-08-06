@@ -19,6 +19,7 @@ import { Landing } from './modules/Landing';
 import { Settings } from './modules/Settings';
 import { Mna, DEFAULT_MNA, type MnaState } from './modules/Mna';
 import { Ledger } from './modules/Ledger';
+import { SAMPLE_BUDGET, reviveBudget, type BudgetData } from './lib/budget';
 import { usePersistedState } from './lib/hooks';
 import {
   STORAGE_KEYS,
@@ -91,6 +92,14 @@ export default function App() {
     }
   );
 
+  // One month of category totals. Lives here, not in Ledger, so it
+  // survives navigating to another module and back.
+  const [budget, setBudget, resetBudget] = usePersistedState<BudgetData>(
+    STORAGE_KEYS.budget,
+    SAMPLE_BUDGET,
+    reviveBudget
+  );
+
   const [settings, setSettings, resetSettings] = usePersistedState<SettingsType>(
     STORAGE_KEYS.settings,
     DEFAULT_SETTINGS,
@@ -121,6 +130,7 @@ export default function App() {
     resetSettings();
     resetPresets();
     resetMna();
+    resetBudget();
   }
 
   function renderModule() {
@@ -148,7 +158,15 @@ export default function App() {
           />
         );
       case 'ledger':
-        return <Ledger />;
+        return (
+          <Ledger
+            data={budget}
+            onChange={setBudget}
+            onReset={resetBudget}
+            holdings={holdings}
+            assumptions={settings.assumptions}
+          />
+        );
 
       case 'settings':
         return (

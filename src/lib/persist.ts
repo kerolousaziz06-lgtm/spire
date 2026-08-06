@@ -28,6 +28,7 @@ export const STORAGE_KEYS = {
   settings: `${PREFIX}:settings`,
   presets: `${PREFIX}:vantage.presets`,
   mna: `${PREFIX}:mna.deal`,
+  budget: `${PREFIX}:ledger.budget`,
 } as const;
 
 type Envelope = { version: number; data: unknown };

@@ -39,8 +39,37 @@ const MIN_H = 1.5;     // a flow under a pixel still gets a visible bar
 // pointing left), so it gets the most room.
 const GUTTER_WEIGHTS = [0.26, 0.42, 0.32];
 
-// Two lines of label. Nothing may be packed tighter than this.
+// The vertical pitch of a label. A block is the name plus the amount 14px
+// below it, so anything under 30 makes one label's amount touch the next
+// label's name. Measured at 23 and again at 28; both overlapped.
+//
+// There is deliberately NO adaptive "squeeze to fit" here. Squeezing kept
+// landing a pixel or two under what the block needs, which produced
+// overlap that looked like a rounding bug and was really the chart being
+// asked to fit in less height than it has. The chart reserves what it
+// needs through minHeightFor and the panel scrolls, which is this
+// project's stated failure mode: scroll, never clip.
 const LABEL_SLOT = 30;
+
+// A label's y is the NAME's baseline. Text rises ~10px above it and the
+// amount line sits 14px below with descenders, so the block occupies
+// [y - RISE, y + TAIL]. Bounds checks that used the bare baseline let the
+// bottom label's amount line hang out of the box.
+const LABEL_RISE = 10;
+const LABEL_TAIL = 18;
+
+// The height a full column of subcategory labels actually needs. Exported
+// so the card can reserve it: below this the chart cannot show every label
+// inside its own box, and the deliberate failure mode in this project is
+// to scroll, never to clip.
+export function minHeightFor(labelsInLongestColumn: number): number {
+  // PAD_T and PAD_B must be the SAME bounds the layout clamps to, or the
+  // reserve is a few pixels short of what the column needs and the last
+  // labels fall out of the box. They disagreed by 4px once; that was
+  // enough.
+  return PAD_T + PAD_B + LABEL_RISE + LABEL_TAIL
+    + Math.max(1, labelsInLongestColumn - 1) * LABEL_SLOT;
+}
 
 // Fallbacks for the first paint, before the wrapper has been measured.
 const W0 = 900, H0 = 460;
@@ -244,7 +273,7 @@ function place(graph: FlowGraph, W: number, H: number) {
       y: (n.y0 + n.y1) / 2 - 4,     // 2-line block, centred on the node
     }));
 
-    declutter(slots, H);
+    declutter(slots, H, LABEL_SLOT);
 
     for (const s of slots) {
       labels.push({
@@ -264,27 +293,48 @@ function place(graph: FlowGraph, W: number, H: number) {
 }
 
 /**
- * Push overlapping labels apart. Labels are NOT clipped to node height —
- * a 0.5% flow has a 2px bar and still needs its full name — so a column of
- * small flows would otherwise stack its text on itself.
+ * Space a column's labels so none overlap, without letting any leave the
+ * box. Labels are NOT clipped to node height — a 0.5% flow has a 2px bar
+ * and still needs its full name — so a column of small flows would
+ * otherwise stack its text on itself.
  *
- * Two passes: shove everything down until nothing overlaps, then, if that
- * ran past the bottom edge, shove back up from the last one. Mutates in
- * place, in the order given, which is the order that keeps labels matched
- * to their bars.
+ * Three passes, and all three are load-bearing:
+ *
+ *   1. DOWN. Enforce a minimum pitch, top to bottom. This only ever
+ *      increases gaps, so the column can end up taller than the box.
+ *   2. UP from the bottom. Pin the last label to the floor and pull each
+ *      one above it in to exactly `slot`. This is the pass that COMPRESSES
+ *      the oversized gaps, and it is the one that matters.
+ *   3. Shift down if the head is still above the ceiling.
+ *
+ * Pass 2 was removed once in favour of shifting the whole column rigidly,
+ * which looked equivalent and was not: when the natural spread exceeds the
+ * box, the up-shift and the down-shift are the same size and cancel, so
+ * nothing moves and the tail hangs out of the card. A rigid shift can only
+ * relocate a column, never fit one.
+ *
+ * After pass 2 the spacing is exactly `slot`, so pass 3 is a no-op
+ * whenever the box is at least (n-1)*slot tall. minHeightFor reserves it.
  */
-function declutter(slots: { y: number }[], H: number) {
+function declutter(slots: { y: number }[], H: number, slot: number) {
+  if (slots.length === 0) return;
+  const ceiling = PAD_T + LABEL_RISE;
+  const floor = H - PAD_B - LABEL_TAIL;
+
   for (let i = 1; i < slots.length; i++) {
-    const minY = slots[i - 1].y + LABEL_SLOT;
+    const minY = slots[i - 1].y + slot;
     if (slots[i].y < minY) slots[i].y = minY;
   }
+
   const last = slots[slots.length - 1];
-  if (!last) return;
-  if (last.y > H - PAD_B) {
-    last.y = H - PAD_B;
+  if (last.y > floor) {
+    last.y = floor;
     for (let i = slots.length - 2; i >= 0; i--) {
-      const maxY = slots[i + 1].y - LABEL_SLOT;
+      const maxY = slots[i + 1].y - slot;
       if (slots[i].y > maxY) slots[i].y = maxY;
     }
   }
+
+  const under = ceiling - slots[0].y;
+  if (under > 0) for (const s of slots) s.y += under;
 }

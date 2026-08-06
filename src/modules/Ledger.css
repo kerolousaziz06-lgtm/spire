@@ -1,34 +1,61 @@
-.ledger {
-  display: flex;
-  flex-direction: column;
-  gap: var(--grid-gap);
-  height: 100%;
-  min-height: 0;
+.ledger { display: flex; height: 100%; min-height: 0; }
+
+.ledger-main {
+  flex: 1; min-width: 0; min-height: 0;
+  display: flex; flex-direction: column; gap: var(--s3);
 }
 
-.ledger-top { display: flex; justify-content: space-between; align-items: flex-end; }
+/* ---- header ---- */
+.ledger-header { display: flex; justify-content: space-between; align-items: flex-end; gap: var(--s4); }
 
 .ledger-kicker {
   font-family: var(--font-mono); font-size: var(--fs-xs);
   letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted);
 }
+
+.ledger-monthpick { display: flex; align-items: center; gap: var(--s2); margin-top: 2px; }
+.ledger-monthpick button {
+  background: transparent; border: 1px solid var(--border); border-radius: var(--r-sm);
+  color: var(--text-secondary); cursor: pointer; width: 24px; height: 24px; line-height: 1;
+}
+.ledger-monthpick button:hover { color: var(--text-primary); border-color: var(--border-strong); }
+
 .ledger-month {
   font-size: var(--fs-2xl); font-weight: 600; color: var(--text-primary);
-  margin: 2px 0 0; letter-spacing: -0.01em;
+  margin: 0; letter-spacing: -0.01em;
+}
+
+/* Active states invert to dark ink on bone rather than colouring in. */
+.ledger-tabs { display: flex; gap: 2px; border: 1px solid var(--border); border-radius: var(--r-md); padding: 2px; }
+.ledger-tab {
+  font-family: var(--font-mono); font-size: var(--fs-xs);
+  letter-spacing: 0.12em; text-transform: uppercase;
+  background: transparent; border: none; border-radius: var(--r-sm);
+  color: var(--text-secondary); padding: 6px 14px; cursor: pointer;
+}
+.ledger-tab:hover { color: var(--text-primary); }
+.ledger-tab.is-active { background: var(--accent); color: var(--bg-base); }
+
+/* ---- what-if banner ---- */
+.ledger-whatif-banner {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--s3);
+  border: 1px solid var(--warn); background: var(--warn-dim);
+  border-radius: var(--r-md); padding: 7px 12px;
+  font-size: var(--fs-xs); color: var(--text-primary);
+}
+.ledger-whatif-banner button {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em;
+  text-transform: uppercase; background: transparent; color: var(--text-primary);
+  border: 1px solid var(--border-strong); border-radius: var(--r-sm);
+  padding: 4px 9px; cursor: pointer; flex-shrink: 0;
 }
 
 /* ---- stat row ---- */
-.ledger-stats {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: var(--grid-gap);
-}
+.ledger-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s3); }
 
 .ledger-stat {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--r-lg);
-  padding: var(--s3) var(--s4);
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--r-lg); padding: var(--s2) var(--s3);
 }
 
 .ledger-stat-label {
@@ -36,53 +63,116 @@
   letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted);
 }
 
-.ledger-stat-value {
-  font-size: var(--fs-xl); font-weight: 600; margin-top: 4px;
-  color: var(--text-primary);
-}
+.ledger-stat-value { font-size: var(--fs-lg); font-weight: 600; margin-top: 2px; color: var(--text-primary); }
 .ledger-stat.is-gain .ledger-stat-value { color: var(--gain); }
 .ledger-stat.is-loss .ledger-stat-value { color: var(--loss); }
-
 .ledger-stat-arrow { margin-right: 4px; }
 
-/* The hero. It reads louder than the other three because it is the only
-   one of the four that carries a judgement. */
-.ledger-stat.is-hero { display: flex; flex-direction: column; }
-.ledger-stat.is-hero .ledger-stat-value { font-size: var(--fs-2xl); }
+.ledger-stat.is-hero .ledger-stat-value { font-size: var(--fs-xl); }
 .ledger-stat.is-hero.is-good { border-color: var(--gain); background: var(--gain-dim); }
 .ledger-stat.is-hero.is-ok   { border-color: var(--warn); background: var(--warn-dim); }
 .ledger-stat.is-hero.is-bad  { border-color: var(--loss); background: var(--loss-dim); }
 
 .ledger-stat-verdict {
   font-family: var(--font-mono); font-size: var(--fs-xs);
-  letter-spacing: 0.12em; text-transform: uppercase; margin-top: 2px;
+  letter-spacing: 0.12em; text-transform: uppercase; margin-top: 1px;
 }
 .ledger-stat.is-good .ledger-stat-verdict { color: var(--gain); }
 .ledger-stat.is-ok   .ledger-stat-verdict { color: var(--warn); }
 .ledger-stat.is-bad  .ledger-stat-verdict { color: var(--loss); }
 
-.ledger-meaning {
-  margin: 0; font-size: var(--fs-sm); color: var(--text-secondary);
-}
+.ledger-meaning { margin: 0; font-size: var(--fs-sm); color: var(--text-secondary); }
 
-/* ---- the Sankey ---- */
-/* flex:1 + min-height:0 is what hands the chart a real height budget
-   instead of letting it grow to its content. */
-.ledger-flow-card {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
+/* ---- panels ---- */
+/* min-height:0 on a flex child is what lets the charts inside get a real
+   height budget instead of growing to their content. */
+.ledger-panel { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: var(--s3); overflow-y: auto; }
 
-.ledger-flow-head {
-  display: flex; align-items: baseline; justify-content: space-between;
-  gap: var(--s3); margin-bottom: var(--s2);
-}
+.ledger-cf-card { flex: 0 0 152px; display: flex; flex-direction: column; }
+.ledger-cf-body { flex: 1; min-height: 0; position: relative; margin-top: var(--s2); }
 
+.ledger-flow-card { flex: 1 0 auto; min-height: 0; display: flex; flex-direction: column; }
+.ledger-flow-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s3); margin-bottom: var(--s2); }
 .ledger-flow-note {
   font-family: var(--font-mono); font-size: var(--fs-xs);
   letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted);
 }
-
 .ledger-flow-body { flex: 1; min-height: 0; position: relative; }
+
+/* ---- categories tab ---- */
+.ledger-cats { overflow-y: auto; }
+
+.ledger-donut-row { display: flex; gap: var(--s4); align-items: center; margin-top: var(--s2); }
+.ledger-fixvar { flex: 1; display: flex; flex-direction: column; gap: var(--s3); min-width: 0; }
+
+.ledger-fixvar-top {
+  display: flex; justify-content: space-between; gap: var(--s3);
+  font-size: var(--fs-sm); color: var(--text-primary);
+}
+.ledger-fixvar-track {
+  height: 4px; background: var(--bg-panel); border-radius: 2px;
+  margin: 5px 0 4px; overflow: hidden;
+}
+.ledger-fixvar-track span { display: block; height: 100%; background: var(--accent); }
+.ledger-fixvar-note { font-size: var(--fs-xs); color: var(--text-muted); }
+
+.ledger-list { display: flex; flex-direction: column; }
+
+.ledger-row {
+  display: flex; align-items: flex-start; gap: var(--s2);
+  padding: 9px 0; border-top: 1px solid var(--border);
+  transition: opacity 140ms ease;
+}
+.ledger-row:first-child { border-top: none; }
+.ledger-row.is-dim { opacity: 0.4; }
+
+.ledger-row-dot { width: 8px; height: 8px; border-radius: 1px; margin-top: 5px; flex-shrink: 0; }
+.ledger-row-body { flex: 1; min-width: 0; }
+.ledger-row-top { display: flex; justify-content: space-between; gap: var(--s3); }
+.ledger-row-name { font-size: var(--fs-sm); color: var(--text-primary); }
+.ledger-row-amt { font-size: var(--fs-sm); color: var(--text-primary); }
+.ledger-row-meaning { font-size: var(--fs-xs); color: var(--text-muted); margin-top: 1px; }
+
+.ledger-verdict {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em;
+  text-transform: uppercase; padding: 2px 7px; border-radius: var(--r-sm);
+  border: 1px solid; flex-shrink: 0; margin-top: 2px;
+}
+.ledger-verdict.is-good { color: var(--gain); border-color: var(--gain); background: var(--gain-dim); }
+.ledger-verdict.is-ok   { color: var(--warn); border-color: var(--warn); background: var(--warn-dim); }
+.ledger-verdict.is-bad  { color: var(--loss); border-color: var(--loss); background: var(--loss-dim); }
+
+/* ---- what-if ---- */
+.ledger-note { font-size: var(--fs-xs); color: var(--text-muted); margin: 0 0 var(--s3); line-height: 1.5; }
+
+.ledger-sliders { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s3) var(--s4); }
+.ledger-slider-top {
+  display: flex; justify-content: space-between; gap: var(--s2);
+  font-size: var(--fs-xs); color: var(--text-secondary); margin-bottom: 3px;
+}
+.ledger-slider-delta { font-style: normal; color: var(--warn); margin-left: 5px; }
+.ledger-slider input { width: 100%; }
+
+/* Structure is monochrome: a range control left unstyled renders in the
+   browser's own blue, which is the one hue the theme does not have.
+   Same treatment as Settings and M&A. */
+.ledger input[type="range"] { accent-color: var(--accent); }
+
+/* ---- goals ---- */
+.ledger-goals { display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: min-content; gap: var(--s3); overflow-y: auto; }
+.ledger-plan-card { grid-column: 1 / -1; }
+
+.ledger-cash { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); margin: var(--s2) 0; font-size: var(--fs-sm); color: var(--text-secondary); }
+.ledger-cash .be-input { width: 110px; }
+
+.ledger-big { font-size: var(--fs-2xl); font-weight: 600; color: var(--text-primary); margin: var(--s2) 0 4px; }
+.ledger-big-unit { font-size: var(--fs-sm); color: var(--text-muted); margin-left: 5px; font-weight: 400; }
+.ledger-big.is-good { color: var(--gain); }
+.ledger-big.is-ok { color: var(--warn); }
+.ledger-big.is-bad { color: var(--loss); }
+
+.ledger-plan-controls { margin: var(--s2) 0; }
+.ledger-plan-controls label { display: flex; align-items: center; gap: var(--s3); font-size: var(--fs-xs); color: var(--text-secondary); }
+.ledger-plan-controls input { flex: 1; max-width: 260px; }
+
+.ledger-empty { font-size: var(--fs-xs); color: var(--text-muted); margin: 0; }

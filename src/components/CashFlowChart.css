@@ -1,0 +1,64 @@
+.cf-wrap { position: relative; width: 100%; height: 100%; min-height: 0; }
+
+.cf-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+.cf-grid { stroke: var(--border); stroke-width: 1; }
+
+.cf-tick, .cf-month {
+  font-family: var(--font-mono); font-size: 9px;
+  letter-spacing: 0.08em; fill: var(--text-muted);
+}
+
+.cf-hit { fill: transparent; }
+
+.cf-bar--in { fill: var(--gain); opacity: 0.55; }
+.cf-bar--out { fill: var(--loss); opacity: 0.85; }
+
+/* The month still being lived in is partial by definition. An outline
+   says "not finished" without inventing a projection. */
+.cf-bar.is-partial { fill: none; stroke-width: 1; stroke-dasharray: 3 2; }
+.cf-bar--in.is-partial { stroke: var(--gain); }
+.cf-bar--out.is-partial { stroke: var(--loss); }
+
+.cf-net { fill: none; stroke: var(--accent); stroke-width: 1.5; }
+.cf-dot { fill: var(--accent); }
+.cf-dot.is-on { fill: var(--accent-bright); }
+
+.cf-tip {
+  position: absolute; top: 6px; transform: translateX(-50%);
+  background: var(--bg-panel); border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm); padding: 6px 9px; pointer-events: none;
+  min-width: 120px;
+}
+.cf-tip-month {
+  font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--text-muted); margin-bottom: 3px;
+}
+.cf-tip-row {
+  display: flex; justify-content: space-between; gap: var(--s3);
+  font-size: var(--fs-xs); color: var(--text-secondary);
+}
+.cf-tip-row.is-net { color: var(--gain); }
+.cf-tip-row.is-net.is-neg { color: var(--loss); }
+
+.cf-legend {
+  position: absolute; top: 0; right: 0; display: flex; gap: var(--s3);
+}
+.cf-key {
+  font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--text-muted);
+  display: flex; align-items: center; gap: 4px;
+}
+.cf-key::before { content: ''; width: 8px; height: 8px; border-radius: 1px; }
+.cf-key--in::before { background: var(--gain); opacity: 0.55; }
+.cf-key--out::before { background: var(--loss); opacity: 0.85; }
+.cf-key--net::before { background: var(--accent); height: 2px; }
+
+.cf-empty {
+  position: absolute; inset: 0; display: flex; align-items: center;
+  justify-content: center; font-size: var(--fs-xs); color: var(--text-muted);
+}
+
+/* The zero line is the baseline every bar grows from, so it reads
+   stronger than the other gridlines. */
+.cf-grid.is-zero { stroke: var(--border-strong); }
