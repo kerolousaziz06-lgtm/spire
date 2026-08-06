@@ -5,7 +5,7 @@
 // (Future modules just add one entry to the NAV array below —
 // this is the "platform that could grow" structure.)
 // ============================================================
-import { LogoMark, IconStress, IconMerge, IconValuation, IconSettings } from './Icons';
+import { LogoMark, IconStress, IconMerge, IconValuation, IconFlow, IconSettings } from './Icons';
 import './Sidebar.css';
 
 // Each nav item: an id, a label (for the tooltip + accessibility),
@@ -14,6 +14,7 @@ const NAV = [
   { id: 'stress',    label: 'MonteVue',   Icon: IconStress,    enabled: true  },
   { id: 'vantage',   label: 'Vantage',    Icon: IconValuation, enabled: true  },
   { id: 'mna',       label: 'M&A',        Icon: IconMerge,     enabled: true  },
+  { id: 'ledger',    label: 'Ledger',     Icon: IconFlow,      enabled: true  },
 ];
 
 type SidebarProps = {

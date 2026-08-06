@@ -22,6 +22,7 @@ import { dupont, multiples, profitability, SAMPLE_INPUT } from '../src/lib/analy
 import { runDcf } from '../src/lib/dcf';
 import { runLbo, SAMPLE_LBO } from '../src/lib/lbo';
 import { runMna, type MnaCompany, type MnaDeal } from '../src/lib/mna';
+import { computeMonth, buildFlow, flowImbalance, emptyMonth, type MonthEntry } from '../src/lib/budget';
 
 function mulberry32(a: number) {
   return function () {
@@ -496,3 +497,131 @@ console.log('='.repeat(74));
   const fr = flat.find((x) => x.key === 'roic')!, fe = flat.find((x) => x.key === 'roe')!;
   console.log(`\n  debt-free variant   ROE ${fe.display}  ROIC ${fr.display}  gap ${(fe.value / fr.value).toFixed(2)}x  ${fe.value / fr.value < 1.5 ? 'PASS (no leverage, so they converge)' : 'FAIL'}`);
 }
+
+console.log('\n' + '='.repeat(74));
+console.log('J. Personal finance engine — derivation, the Sankey graph, deficits');
+console.log('='.repeat(74));
+
+// The fixture is a synthetic fixture, which is the useful
+// property: it reconciles to the cent, so any arithmetic drift shows up
+// as a nonzero residual rather than as a plausible-looking total.
+//
+//   9,250.00 + 1,875.00 + 143.20                 = 11,268.20 income
+//   5,043.66 savings + 6,224.54 expenses           = 11,268.20
+//
+// Subcategory groupings follow THIS app's taxonomy, not Monarch's (they
+// file pets under Travel & Lifestyle; here it is Other), so category
+// totals are expected to differ from the screenshot. The invariants and
+// the per-line figures do not.
+const REAL: MonthEntry = {
+  month: '2026-05',
+  income: { paycheck: 9250, business: 1875, interest: 143.20 },
+  spend: {
+    auto_payment: 685.40, auto_upkeep: 142.85, gas: 238.60, transit: 96.15,
+    vacation: 612.75, entertainment: 244.30,
+    general_shop: 486.40, clothing: 274.85, furniture: 189.30,
+    groceries: 968.65, restaurants: 512.40, coffee: 118.75,
+    phone: 185.50, internet: 179.99, electricity: 141.35, water: 58.20,
+    home_upkeep: 685.65,
+    medical: 228.90,
+    pets: 174.55,
+  },
+};
+
+const bt = computeMonth(REAL);
+const okc = (a: number, b: number, tol = 1e-9) => (Math.abs(a - b) < tol ? 'PASS' : 'FAIL');
+
+console.log(`total income      ${f(bt.totalIncome, 2)}   hand: 11268.20.00   ${okc(bt.totalIncome, 11268.20)}`);
+console.log(`total expenses    ${f(bt.totalExpenses, 2)}   hand: 6224.54   ${okc(bt.totalExpenses, 6224.54, 1e-6)}`);
+console.log(`savings (DERIVED) ${f(bt.savings, 2)}   hand: 5043.66   ${okc(bt.savings, 5043.66, 1e-6)}`);
+console.log(`savings rate      ${pct(bt.savingsRate!, 2)}          hand: 41.70%      ${okc(bt.savingsRate!, 5043.66 / 11268.20, 1e-9)}`);
+console.log(`fixed + variable  ${f(bt.fixedTotal + bt.variableTotal, 2)}   = expenses?       ${okc(bt.fixedTotal + bt.variableTotal, bt.totalExpenses, 1e-6)}`);
+
+// The identity that cannot be violated, because neither side is entered.
+console.log(`\nincome - expenses - savings = ${f(bt.totalIncome - bt.totalExpenses - bt.savings, 12)}  ${okc(bt.totalIncome - bt.totalExpenses - bt.savings, 0)}`);
+
+let catResidual = 0;
+for (const c of bt.categories) {
+  const kids = c.children.reduce((s, k) => s + k.amount, 0);
+  catResidual = Math.max(catResidual, Math.abs(kids - c.total));
+}
+console.log(`worst |category - sum(children)| = ${f(catResidual, 12)}  ${okc(catResidual, 0)}  (derived, so structurally 0)`);
+
+// ---- the graph ----
+const g = buildFlow(bt);
+console.log(`\nSankey: ${g.nodes.length} nodes, ${g.links.length} links, deficit=${g.deficit}`);
+console.log(`worst node inflow/outflow imbalance = ${f(flowImbalance(g), 12)}  ${okc(flowImbalance(g), 0, 1e-6)}`);
+
+const col = (d: number) => g.nodes.filter((n) => n.depth === d);
+console.log(`  depth 0 sources    ${col(0).length}  sum ${f(col(0).reduce((s, n) => s + n.value, 0), 2)}  ${okc(col(0).reduce((s, n) => s + n.value, 0), g.denominator, 1e-6)}`);
+console.log(`  depth 1 trunk      ${col(1).length}  share ${pct(col(1)[0].share, 2)}  ${col(1).length === 1 && col(1)[0].share === 1 ? 'PASS' : 'FAIL'}`);
+console.log(`  depth 2 cats+sav   ${col(2).length}  sum ${f(col(2).reduce((s, n) => s + n.value, 0), 2)}  ${okc(col(2).reduce((s, n) => s + n.value, 0), g.denominator, 1e-6)}`);
+console.log(`  depth 3 children   ${col(3).length}  (ragged: single-child categories stop at depth 2)`);
+
+// Savings pinned to the top of its column, ahead of a category 8x its size.
+const firstAtTwo = col(2)[0];
+console.log(`  first depth-2 node "${firstAtTwo.label}"  ${firstAtTwo.kind === 'savings' ? 'PASS (pinned top)' : 'FAIL'}`);
+const catsOnly = col(2).filter((n) => n.kind === 'category').map((n) => n.value);
+const desc = catsOnly.every((v, i) => i === 0 || catsOnly[i - 1] >= v);
+console.log(`  categories descending after savings  ${desc ? 'PASS' : 'FAIL'}`);
+
+// One denominator at every level. Monarch's own export does not do this:
+// it labels Phone 3.7%, which is 185.50 / 6,224.54 (expenses), while
+// labelling the parent category against income. Same diagram, two rulers.
+const phone = g.nodes.find((n) => n.id === 'sub:phone')!;
+const bills = g.nodes.find((n) => n.id === 'cat:bills')!;
+const monarchPhone = 185.50 / 6224.54;
+console.log(`\ndenominator check`);
+console.log(`  Bills & Utilities  ${pct(bills.share, 2)}  of ${f(g.denominator, 2)}`);
+console.log(`  Phone (ours)       ${pct(phone.share, 2)}  of ${f(g.denominator, 2)}   ${okc(phone.share, 185.50 / 11268.20, 1e-9)}`);
+console.log(`  Phone (Monarch)    ${pct(monarchPhone, 2)}  of 6224.54 (expenses) — same dollars, two rulers`);
+console.log(`  every node divides by the same number  ${g.nodes.every((n) => Math.abs(n.share - n.value / g.denominator) < 1e-12) ? 'PASS' : 'FAIL'}`);
+
+// ---- a category with one child emits no depth-3 node ----
+const healthKids = g.nodes.filter((n) => n.id.startsWith('sub:') && g.links.some((l) => l.target === n.id && l.source === 'cat:health'));
+console.log(`\nsingle-child category (Health, only Medical) -> ${healthKids.length} depth-3 nodes  ${healthKids.length === 0 ? 'PASS (a lone child restates its parent)' : 'FAIL'}`);
+
+// ---- the deficit month: a negative flow has no geometry ----
+const SHORT: MonthEntry = {
+  month: '2026-06',
+  income: { paycheck: 4000 },
+  spend: { rent_mortgage: 2800, groceries: 900, restaurants: 600, gas: 300, general_shop: 400 },
+};
+const st = computeMonth(SHORT);
+const sg = buildFlow(st);
+console.log(`\ndeficit month: income ${f(st.totalIncome, 2)}, expenses ${f(st.totalExpenses, 2)}, savings ${f(st.savings, 2)}`);
+console.log(`  savings negative, not clamped to 0        ${st.savings < 0 ? 'PASS' : 'FAIL'}`);
+console.log(`  savings rate ${pct(st.savingsRate!, 2)}                     ${st.savingsRate! < 0 ? 'PASS' : 'FAIL'}`);
+console.log(`  no savings node drawn                     ${sg.nodes.some((n) => n.kind === 'savings') ? 'FAIL' : 'PASS'}`);
+const def = sg.nodes.find((n) => n.kind === 'deficit');
+console.log(`  deficit enters as a SOURCE, ${f(def?.value ?? 0, 2)}       ${def && def.depth === 0 ? 'PASS' : 'FAIL'}`);
+console.log(`  graph still balances                      ${okc(flowImbalance(sg), 0, 1e-6)}`);
+console.log(`  denominator = income + drawdown ${f(sg.denominator, 2)}  ${okc(sg.denominator, st.totalExpenses, 1e-6)}  (equals what was spent)`);
+
+// ---- no income at all: a rate would be Infinity or an invented 0% ----
+const NOINC = computeMonth({ month: '2026-07', income: {}, spend: { groceries: 400 } });
+console.log(`\nspending with no income entered: savingsRate = ${NOINC.savingsRate}  ${NOINC.savingsRate === null ? 'PASS (null, not Infinity or a made-up 0%)' : 'FAIL'}`);
+
+// ---- the tail fold ----
+const TINY: MonthEntry = {
+  month: '2026-08',
+  income: { paycheck: 10000 },
+  spend: { electricity: 4000, water: 60, internet: 55, phone: 50, garbage: 40 },
+};
+const tg = buildFlow(computeMonth(TINY));
+const other = tg.nodes.find((n) => n.id === 'sub:bills:other');
+console.log(`\ntail fold: 4 children under 1.5% of 10,000`);
+console.log(`  folded into "${other?.label}" = ${f(other?.value ?? 0, 2)}  ${okc(other?.value ?? 0, 205, 1e-9)}`);
+console.log(`  hover detail names all four            ${(other?.detail?.split('\n').length ?? 0) === 4 ? 'PASS' : 'FAIL'}`);
+console.log(`  bills still balances                   ${okc(flowImbalance(tg), 0, 1e-6)}`);
+
+// Folding ONE row into "Other (1)" costs the same height and says less.
+const ONE: MonthEntry = { month: '2026-09', income: { paycheck: 10000 }, spend: { electricity: 4000, water: 60 } };
+const og = buildFlow(computeMonth(ONE));
+console.log(`  a single small child is NOT folded     ${og.nodes.some((n) => n.id === 'sub:bills:other') ? 'FAIL' : 'PASS'}`);
+
+// ---- an empty month must not produce NaN anywhere ----
+const EMPTY = computeMonth(emptyMonth('2026-10'));
+const eg = buildFlow(EMPTY);
+const anyNaN = [EMPTY.totalIncome, EMPTY.totalExpenses, EMPTY.savings, ...eg.nodes.map((n) => n.share)].some((v) => !Number.isFinite(v));
+console.log(`\nempty month: ${eg.nodes.length} nodes, hasData=${EMPTY.hasData}, any NaN/Infinity? ${anyNaN ? 'yes FAIL' : 'no  PASS'}`);

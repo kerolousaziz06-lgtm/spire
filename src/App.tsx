@@ -18,6 +18,7 @@ import { Vantage } from './modules/Vantage';
 import { Landing } from './modules/Landing';
 import { Settings } from './modules/Settings';
 import { Mna, DEFAULT_MNA, type MnaState } from './modules/Mna';
+import { Ledger } from './modules/Ledger';
 import { usePersistedState } from './lib/hooks';
 import {
   STORAGE_KEYS,
@@ -146,6 +147,9 @@ export default function App() {
             currentCompany={company}
           />
         );
+      case 'ledger':
+        return <Ledger />;
+
       case 'settings':
         return (
           <Settings
