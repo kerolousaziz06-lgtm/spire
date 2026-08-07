@@ -126,7 +126,12 @@
   border-right: 1px solid rgba(236,231,219,0.18);
   cursor: pointer; transition: background 240ms ease;
 }
-.ed-module:last-child { border-right: none; }
+/* Two per row. The right-hand card of EVERY row loses its rule, not just
+   the last card overall — with four modules `:last-child` left a hairline
+   hanging off the right edge of row one. */
+.ed-module:nth-child(2n) { border-right: none; }
+/* And every row but the last gets a rule under it. */
+.ed-module:not(:nth-last-child(-n+2)) { border-bottom: 1px solid rgba(236,231,219,0.18); }
 .ed-module:hover { background: rgba(236,231,219,0.05); }
 .ed-module-num { font-family: var(--font-mono); font-size: 13px; color: var(--light-faint); padding-top: 6px; }
 .ed-module-body { flex: 1; }

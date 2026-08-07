@@ -63,6 +63,12 @@ export function Landing({ onEnter, suiteName = 'SUITE' }: Props) {
         <ModuleCard index={1} num="02" name="Vantage" kind="COMPANY ANALYSIS"
           desc="Statements in. Health, valuation, and a verdict out."
           onEnter={() => onEnter('vantage')} />
+        <ModuleCard index={2} num="03" name="M&amp;A" kind="DEAL ANALYSIS"
+          desc="Two companies, one deal. Watch the earnings per share move."
+          onEnter={() => onEnter('mna')} />
+        <ModuleCard index={3} num="04" name="Ledger" kind="PERSONAL FINANCE"
+          desc="Where the money went, and whether it lasts."
+          onEnter={() => onEnter('ledger')} />
       </section>
 
       <footer className="ed-footer">
