@@ -26,7 +26,7 @@ import { CashFlowChart } from '../components/CashFlowChart';
 import { CategoryDonut } from '../components/CategoryDonut';
 import { SankeyFlow, minHeightFor } from '../components/SankeyFlow';
 import {
-  annualSavings, applyWhatIf, buildFlow, childrenOf, computeMonth, computeSeries,
+  annualSavings, applyWhatIf, buildFlow, computeMonth, computeSeries,
   emptyMonth, isWhatIfActive, monthKey, monthLabel, rateCategory, rateSavings, runway,
   SUBCATEGORY_BY_ID,
   type BudgetData, type MonthEntry, type SubcategoryId, type WhatIf,
