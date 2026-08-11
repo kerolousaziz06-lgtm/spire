@@ -1,11 +1,15 @@
-# Finance Suite
+# Spire
 
-A suite of self-contained, browser-based financial analysis tools. Two modules so far, switchable from the left rail:
+Self-contained, browser-based financial analysis. Four modules, switchable from the left rail:
 
-- **MonteVue** — portfolio stress testing. Monte Carlo simulation (fat-tailed, correlated, log-normal), historical crash replay, correlation heatmap, efficient frontier, and a retirement "will my money last?" planner.
-- **Vantage** — company fundamentals & valuation. You input a company's numbers from its financial statements; it computes ratio analysis, a DuPont ROE breakdown, an interactive DCF valuation, and a combined executive verdict — every number shown with a plain-English meaning and a good/average/bad rating.
+- **MonteVue** — portfolio risk. Monte Carlo simulation (fat-tailed, correlated, log-normal), historical crash replay, correlation heatmap, efficient frontier, and a retirement "will my money last?" planner.
+- **Vantage** — company fundamentals & valuation. Enter a company's figures from its statements; get ratio analysis, a DuPont ROE breakdown, valuation multiples, ROIC, an interactive DCF, an LBO model, and a combined verdict.
+- **M&A** — accretion/dilution. Two companies and a deal structure; pro-forma EPS against standalone, an attribution bridge, and the breakeven offer price.
+- **Ledger** — personal finance. A month of category totals in; a Sankey of where the money went, a savings rate with a verdict, per-category judgements, what-if sliders, and a retirement handoff to MonteVue.
 
-Everything runs entirely in the browser. No backend, no API keys, no external data dependencies — all the math is in the code.
+Every number carries its interpretation: the value, a plain-English meaning, and a good/average/bad rating. A bare ratio could come from anywhere.
+
+Everything runs entirely in the browser. No backend, no API keys, no external requests of any kind — verified with all non-local hosts blocked. All the math is in the code, and `npm run verify:math` re-checks every engine against hand-computed cases.
 
 ## Run it
 

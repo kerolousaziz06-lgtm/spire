@@ -20,7 +20,45 @@
 // are then thrown away instead of being read back half-populated.
 export const SCHEMA_VERSION = 1;
 
-const PREFIX = 'finance-suite';
+const PREFIX = 'spire';
+
+// The app was called "Finance Suite" until the name settled. The prefix
+// is invisible to the user, but it is half of every storage key, so
+// renaming it without moving the data would silently orphan every saved
+// portfolio, company, preset, deal and budget — the app would come back
+// looking like a fresh install with the old data still sitting in the
+// browser, unreachable.
+const LEGACY_PREFIX = 'finance-suite';
+
+/**
+ * Move anything written under the old prefix across, once. Runs at module
+ * load, before any read.
+ *
+ * Keys are collected BEFORE anything is removed: mutating localStorage
+ * while walking it by index reshuffles the indices and silently skips
+ * entries. A newer value under the new prefix always wins, so running
+ * this twice cannot overwrite current data with stale data.
+ */
+function migrateLegacyKeys(): void {
+  const store = storage();
+  if (!store) return;
+  try {
+    const stale: string[] = [];
+    for (let i = 0; i < store.length; i++) {
+      const k = store.key(i);
+      if (k && k.startsWith(`${LEGACY_PREFIX}:`)) stale.push(k);
+    }
+    for (const k of stale) {
+      const target = `${PREFIX}${k.slice(LEGACY_PREFIX.length)}`;
+      const value = store.getItem(k);
+      if (value !== null && store.getItem(target) === null) store.setItem(target, value);
+      store.removeItem(k);
+    }
+  } catch {
+    // Quota, private mode, a hostile value. A failed migration must never
+    // stop the app loading; the worst case is the defaults.
+  }
+}
 
 export const STORAGE_KEYS = {
   portfolio: `${PREFIX}:montevue.portfolio`,
@@ -43,6 +81,8 @@ function storage(): Storage | null {
     return null;
   }
 }
+
+migrateLegacyKeys();
 
 /**
  * Read a persisted value, or return `fallback`.

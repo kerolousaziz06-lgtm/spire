@@ -9,9 +9,9 @@ import { WallStreetMap } from '../components/WallStreetMap';
 import { useReveal } from '../lib/hooks';
 import './Landing.css';
 
-type Props = { onEnter: (module: string) => void; suiteName?: string };
+type Props = { onEnter: (module: string) => void; brand?: string };
 
-export function Landing({ onEnter, suiteName = 'SUITE' }: Props) {
+export function Landing({ onEnter, brand = 'SPIRE' }: Props) {
   return (
     <div className="ed">
       <div className="ed-topbar">
@@ -22,7 +22,7 @@ export function Landing({ onEnter, suiteName = 'SUITE' }: Props) {
 
       <section className="ed-hero">
         {/* Full-width so the wordmark centres on the page, not on the map */}
-        <h1 className="ed-word">{suiteName}</h1>
+        <h1 className="ed-word">{brand}</h1>
 
         {/* The map flanked by two marginalia rails. The rails are flex
             siblings of the frame and stretch to its height, which is what
@@ -53,7 +53,7 @@ export function Landing({ onEnter, suiteName = 'SUITE' }: Props) {
           <span>DOWNTOWN MANHATTAN</span>
         </div>
 
-        <p className="ed-tagline">Portfolio risk &amp; company valuation.</p>
+        <p className="ed-tagline">Portfolio risk, company valuation, deals, and personal finance.</p>
       </section>
 
       <section className="ed-modules">
@@ -72,7 +72,7 @@ export function Landing({ onEnter, suiteName = 'SUITE' }: Props) {
       </section>
 
       <footer className="ed-footer">
-        <span>{suiteName}</span>
+        <span>{brand}</span>
         <span>©{new Date().getFullYear()}</span>
       </footer>
     </div>
