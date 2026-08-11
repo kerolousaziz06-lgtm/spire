@@ -502,20 +502,33 @@ console.log('\n' + '='.repeat(74));
 console.log('J. Personal finance engine — derivation, the Sankey graph, deficits');
 console.log('='.repeat(74));
 
-// The fixture is a synthetic fixture, which is the useful
-// property: it reconciles to the cent, so any arithmetic drift shows up
-// as a nonzero residual rather than as a plausible-looking total.
+// A synthetic month, chosen for the property that matters: every line
+// carries cents, so the totals reconcile to the cent and any arithmetic
+// drift shows up as a nonzero residual rather than as a plausible-looking
+// total. Rounder numbers would let a drift of a few cents hide.
 //
-//   9,250.00 + 1,875.00 + 143.20                 = 11,268.20 income
-//   5,043.66 savings + 6,224.54 expenses           = 11,268.20
+//   9,250.00 + 1,875.00 + 143.20              = 11,268.20 income
+//   5,043.66 savings + 6,224.54 expenses      = 11,268.20
 //
-// Subcategory groupings follow THIS app's taxonomy, not Monarch's (they
-// file pets under Travel & Lifestyle; here it is Other), so category
-// totals are expected to differ from the screenshot. The invariants and
-// the per-line figures do not.
-const REAL: MonthEntry = {
+// The shape is deliberate, not decorative — it is what makes the graph
+// assertions below mean anything:
+//   - 19 spend lines across 8 categories, so depth 3 is ragged
+//   - Health carries ONLY Medical, the single-child case that must emit
+//     no depth-3 node
+//   - Housing likewise carries only home_upkeep
+//   - Bills carries two lines above MIN_CHILD_SHARE (phone, internet) and
+//     two below (electricity, water), so the "+2 smaller" fold fires. Keep
+//     phone above 1.5% of income or it folds away and the denominator
+//     check below loses the node it reads.
+//   - savings stays positive, so the deficit path is exercised separately
+//     by SHORT below rather than here
+//
+// This fixture used to be a real personal Monarch export. It was replaced
+// with synthetic figures before the repo went public; the invariants it
+// checks are unchanged, because none of them depended on the values.
+const FIXTURE: MonthEntry = {
   month: '2026-05',
-  income: { paycheck: 9250, business: 1875, interest: 143.20 },
+  income: { paycheck: 9250.00, business: 1875.00, interest: 143.20 },
   spend: {
     auto_payment: 685.40, auto_upkeep: 142.85, gas: 238.60, transit: 96.15,
     vacation: 612.75, entertainment: 244.30,
@@ -528,13 +541,13 @@ const REAL: MonthEntry = {
   },
 };
 
-const bt = computeMonth(REAL);
+const bt = computeMonth(FIXTURE);
 const okc = (a: number, b: number, tol = 1e-9) => (Math.abs(a - b) < tol ? 'PASS' : 'FAIL');
 
-console.log(`total income      ${f(bt.totalIncome, 2)}   hand: 11268.20.00   ${okc(bt.totalIncome, 11268.20)}`);
-console.log(`total expenses    ${f(bt.totalExpenses, 2)}   hand: 6224.54   ${okc(bt.totalExpenses, 6224.54, 1e-6)}`);
-console.log(`savings (DERIVED) ${f(bt.savings, 2)}   hand: 5043.66   ${okc(bt.savings, 5043.66, 1e-6)}`);
-console.log(`savings rate      ${pct(bt.savingsRate!, 2)}          hand: 41.70%      ${okc(bt.savingsRate!, 5043.66 / 11268.20, 1e-9)}`);
+console.log(`total income      ${f(bt.totalIncome, 2)}   hand: 11268.20   ${okc(bt.totalIncome, 11268.20, 1e-9)}`);
+console.log(`total expenses    ${f(bt.totalExpenses, 2)}   hand: 6224.54    ${okc(bt.totalExpenses, 6224.54, 1e-6)}`);
+console.log(`savings (DERIVED) ${f(bt.savings, 2)}   hand: 5043.66    ${okc(bt.savings, 5043.66, 1e-6)}`);
+console.log(`savings rate      ${pct(bt.savingsRate!, 2)}          hand: 44.76%     ${okc(bt.savingsRate!, 5043.66 / 11268.20, 1e-9)}`);
 console.log(`fixed + variable  ${f(bt.fixedTotal + bt.variableTotal, 2)}   = expenses?       ${okc(bt.fixedTotal + bt.variableTotal, bt.totalExpenses, 1e-6)}`);
 
 // The identity that cannot be violated, because neither side is entered.
@@ -558,23 +571,29 @@ console.log(`  depth 1 trunk      ${col(1).length}  share ${pct(col(1)[0].share,
 console.log(`  depth 2 cats+sav   ${col(2).length}  sum ${f(col(2).reduce((s, n) => s + n.value, 0), 2)}  ${okc(col(2).reduce((s, n) => s + n.value, 0), g.denominator, 1e-6)}`);
 console.log(`  depth 3 children   ${col(3).length}  (ragged: single-child categories stop at depth 2)`);
 
-// Savings pinned to the top of its column, ahead of a category 8x its size.
+// Savings pinned to the top of its column. NOTE the limit of this check:
+// savings exceeds every category on this fixture, so sorting by value
+// would put it first too. This asserts the ordering, not the pinning. A
+// fixture with a thin savings line is what would prove pinning.
 const firstAtTwo = col(2)[0];
 console.log(`  first depth-2 node "${firstAtTwo.label}"  ${firstAtTwo.kind === 'savings' ? 'PASS (pinned top)' : 'FAIL'}`);
 const catsOnly = col(2).filter((n) => n.kind === 'category').map((n) => n.value);
 const desc = catsOnly.every((v, i) => i === 0 || catsOnly[i - 1] >= v);
 console.log(`  categories descending after savings  ${desc ? 'PASS' : 'FAIL'}`);
 
-// One denominator at every level. Monarch's own export does not do this:
-// it labels Phone 3.7%, which is 185.50 / 6,224.54 (expenses), while
-// labelling the parent category against income. Same diagram, two rulers.
+// One denominator at every level. Monarch does not do this: it divides a
+// subcategory by total EXPENSES while dividing its parent category by
+// total INCOME, so the same dollars carry two different percentages in one
+// diagram. Reproduced here on this fixture rather than asserted: the two
+// figures below are the same $185.50 phone line under the two rulers.
 const phone = g.nodes.find((n) => n.id === 'sub:phone')!;
 const bills = g.nodes.find((n) => n.id === 'cat:bills')!;
-const monarchPhone = 185.50 / 6224.54;
+const monarchPhone = phone.value / bt.totalExpenses;
 console.log(`\ndenominator check`);
 console.log(`  Bills & Utilities  ${pct(bills.share, 2)}  of ${f(g.denominator, 2)}`);
 console.log(`  Phone (ours)       ${pct(phone.share, 2)}  of ${f(g.denominator, 2)}   ${okc(phone.share, 185.50 / 11268.20, 1e-9)}`);
-console.log(`  Phone (Monarch)    ${pct(monarchPhone, 2)}  of 6224.54 (expenses) — same dollars, two rulers`);
+console.log(`  Phone (Monarch)    ${pct(monarchPhone, 2)}  of ${f(bt.totalExpenses, 2)} (expenses) — same dollars, two rulers`);
+console.log(`  the two disagree                       ${Math.abs(monarchPhone - phone.share) > 1e-6 ? 'PASS (this is the bug being avoided)' : 'FAIL'}`);
 console.log(`  every node divides by the same number  ${g.nodes.every((n) => Math.abs(n.share - n.value / g.denominator) < 1e-12) ? 'PASS' : 'FAIL'}`);
 
 // ---- a category with one child emits no depth-3 node ----

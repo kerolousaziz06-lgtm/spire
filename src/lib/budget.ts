@@ -291,10 +291,11 @@ export type FlowNode = {
   // Share of total income. ONE denominator for every node at every level.
   //
   // Monarch changes denominator between levels and contradicts itself in
-  // the process: in Monarch's own output, Health & Wellness $228.90 is labelled
-  // 0.72% (of income) while its only child, Medical $228.90, is labelled
-  // 1.23% (of expenses). Same dollars, one flow, two percentages. A single
-  // denominator costs nothing and cannot do that.
+  // the process: a category is labelled as a share of INCOME while its
+  // only child — the identical dollars, one unsplit flow — is labelled as
+  // a share of EXPENSES, so the same money carries two percentages in one
+  // diagram. A single denominator costs nothing and cannot do that.
+  // Harness section J reproduces both readings from one fixture.
   share: number;
   // Set on an aggregate row, naming what it swallowed.
   detail?: string;

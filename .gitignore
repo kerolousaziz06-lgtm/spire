@@ -1,7 +1,26 @@
 node_modules
 dist
+dist-ssr
 .vite
 *.log
+*.local
+
+# Environment — never commit. The app has no backend and needs no secrets,
+# which is exactly why an .env here would be an accident rather than a habit.
+.env
+.env.*
+!.env.example
+
+# macOS
+.DS_Store
+
+# Editors / IDEs
+.vscode/
+.idea/
+*.swp
+
+# Agent tooling
+.claude/
 
 # TypeScript incremental build cache (created by npm run build)
 *.tsbuildinfo
