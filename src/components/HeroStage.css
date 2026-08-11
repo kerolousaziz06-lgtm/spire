@@ -1,0 +1,24 @@
+/* The svg carries its own aspect ratio through the viewBox, so it only
+   needs a width. The hero caps that width against the available height
+   (see .ed-stage) rather than the svg guessing. */
+.hs {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.hs-word {
+  font-family: var(--font-grotesk);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  fill: var(--light);
+}
+
+/* Knocks the panel back so the sharp lens reads as brighter than its
+   surroundings, which is what makes it look like a lens. */
+.hs-panel-tint { fill: var(--ground); opacity: 0.34; }
+
+.hs-panel-edge { fill: none; stroke: rgba(236,231,219,0.20); stroke-width: 1; }
+
+.hs-rule { fill: none; stroke: rgba(236,231,219,0.28); stroke-width: 1; }
+.hs-rim  { fill: none; stroke: rgba(236,231,219,0.42); stroke-width: 1.25; }

@@ -47,21 +47,26 @@
 
 /* Wordmark. Full page width, so it centres on the page rather than on the
    map — it is deliberately wider than the frame. */
-.ed-word {
-  font-family: var(--font-grotesk);
-  font-weight: 700;
-  font-size: clamp(72px, 18.6vw, 280px);
-  line-height: 0.86;
-  letter-spacing: -0.03em;
-  text-align: center;
+/* The stage: wordmark, panel and arch lens, all one svg.
+
+   Width is capped against the AVAILABLE HEIGHT, not guessed. The svg's
+   aspect ratio is fixed by its viewBox (1000 x 780), so height follows
+   width — and a hero that must fit one viewport has to solve that the
+   other way round. The subtrahend is the topbar, caption, tagline and
+   padding stacked around it. */
+.ed-stage {
+  position: relative;
+  flex: 0 1 auto;
   width: 100%;
+  max-width: min(1040px, calc((100vh - 300px) * 1.282));
   margin: 0;
-  color: var(--light);
-  /* letter-spacing appends a trailing space after the LAST glyph too, so the
-     inline box ends before the ink does and centring puts the ink half a
-     letter-space right of centre. Pull back by half, not the full amount —
-     the old rule used the full -0.03em and overshot. */
-  text-indent: -0.0075em;
+}
+
+/* The h1 needs real text for anything that does not render the svg. */
+.ed-sr {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip-path: inset(50%); white-space: nowrap; border: 0;
 }
 
 /* The map row: rail | frame | rail. Both rails flex to fill the leftover
@@ -73,6 +78,7 @@
   justify-content: center;
   gap: var(--s5);
   width: 100%;
+  min-height: 0;
 }
 
 .ed-rail {
@@ -86,11 +92,7 @@
 .ed-rail--r { align-items: flex-end; }
 
 /* square frame holding the map + lens */
-.ed-frame {
-  position: relative;
-  flex: 0 0 auto;
-  width: min(440px, 34vw);
-}
+
 
 .ed-frame-caption {
   display: flex; justify-content: center; gap: var(--s2);
@@ -154,8 +156,8 @@
 }
 
 @media (max-width: 720px) {
-  .ed-word { font-size: clamp(56px, 19vw, 110px); }
-  .ed-frame { width: 76vw; }
+  
+  .ed-stage { max-width: 92vw; }
   .ed-modules { grid-template-columns: 1fr; }
   .ed-module { border-right: none; border-bottom: 1px solid rgba(236,231,219,0.18); }
   /* No room for the rails beside the frame on a phone */

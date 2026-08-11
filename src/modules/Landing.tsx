@@ -5,7 +5,7 @@
 // circular focus-lens (sharp center, blurred surround). Dark
 // background, all text light-on-dark, editorial marginalia.
 // ============================================================
-import { WallStreetMap } from '../components/WallStreetMap';
+import { HeroStage } from '../components/HeroStage';
 import { useReveal } from '../lib/hooks';
 import './Landing.css';
 
@@ -21,9 +21,6 @@ export function Landing({ onEnter, brand = 'SPIRE' }: Props) {
       </div>
 
       <section className="ed-hero">
-        {/* Full-width so the wordmark centres on the page, not on the map */}
-        <h1 className="ed-word">{brand}</h1>
-
         {/* The map flanked by two marginalia rails. The rails are flex
             siblings of the frame and stretch to its height, which is what
             pins each label to the frame's top, middle and bottom edge.
@@ -36,9 +33,12 @@ export function Landing({ onEnter, brand = 'SPIRE' }: Props) {
             <span className="ed-margin">VALUATION</span>
           </div>
 
-          <div className="ed-frame">
-            <WallStreetMap />
-          </div>
+          {/* Wordmark, panel and lens are one svg: the arch has to cut the
+              type exactly, and two separate elements drift apart. */}
+          <h1 className="ed-stage">
+            <span className="ed-sr">{brand}</span>
+            <HeroStage brand={brand} />
+          </h1>
 
           <div className="ed-rail ed-rail--r">
             <span className="ed-margin">74.0113° W</span>
