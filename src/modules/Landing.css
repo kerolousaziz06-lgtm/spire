@@ -50,7 +50,7 @@
 /* The stage: wordmark, panel and arch lens, all one svg.
 
    Width is capped against the AVAILABLE HEIGHT, not guessed. The svg's
-   aspect ratio is fixed by its viewBox (1000 x 780), so height follows
+   aspect ratio is fixed by its viewBox (1000 x 870), so height follows
    width — and a hero that must fit one viewport has to solve that the
    other way round. The subtrahend is the topbar, caption, tagline and
    padding stacked around it. */
@@ -58,7 +58,7 @@
   position: relative;
   flex: 0 1 auto;
   width: 100%;
-  max-width: min(1040px, calc((100vh - 300px) * 1.282));
+  max-width: min(800px, calc((100vh - 160px) * 1.149));
   margin: 0;
 }
 

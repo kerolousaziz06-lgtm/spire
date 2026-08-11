@@ -26,17 +26,35 @@ import './HeroStage.css';
 type Props = { brand: string };
 
 const VB_W = 1000;
-const VB_H = 780;
+const VB_H = 870;
 
 // ---- the panel: the full map, out of focus ----
-const PANEL = { x: 225, y: 310, w: 550, h: 455 };
+//
+// SQUARE, and sized so it renders at the same 440x440 it was before this
+// hero was rebuilt. The arch treatment was the change that was asked for;
+// the picture getting smaller was not. Its top edge sits just ABOVE the
+// wordmark's baseline, so the type overlaps the picture slightly even
+// away from the arch.
+const PANEL = { x: 225, y: 280, w: 550, h: 550 };
 
 // ---- the lens: an arch, rising above the panel into the word ----
 const ARCH_R = 178;
 const ARCH_CX = 500;
-const ARCH_APEX = 260;               // 50 units above the panel's top edge
+const ARCH_APEX = 250;               // 30 units above the panel's top edge
 const ARCH_CY = ARCH_APEX + ARCH_R;  // shared by all three arches
 const ARCH_BOTTOM = PANEL.y + PANEL.h;
+
+// One placement, used by both copies of the map. Outset past the panel so
+// the blur has something to sample at the edges; the clips trim it back.
+const BLEED = 14;
+const IMG = {
+  href: mapImg,
+  x: PANEL.x - BLEED,
+  y: PANEL.y - BLEED,
+  width: PANEL.w + BLEED * 2,
+  height: PANEL.h + BLEED * 2,
+  preserveAspectRatio: 'xMidYMid slice',
+} as const;
 
 const KNOCK_GAP = 13;   // dark gap between the cut letters and the rim
 const RULE_GAP = 30;    // the free-standing rule outside the lens
@@ -48,12 +66,17 @@ function arch(r: number, bottom: number): string {
 }
 
 // The wordmark fills a fixed share of the width whatever the name is, so
-// a longer one shrinks instead of running off the edge. 0.62em is the
-// average advance of Space Grotesk's caps; it only has to be close, the
-// text is centred.
+// a longer one shrinks instead of running off the edge.
+//
+// 0.50em is the average cap advance in Space Grotesk Bold, MEASURED off
+// the rendered bbox (696 design units at font-size 278 for five glyphs),
+// not estimated. The first guess of 0.62 was 24% high and quietly shrank
+// the wordmark by the same amount.
+const AVG_CAP_ADVANCE = 0.50;
+
 function fontSizeFor(brand: string): number {
-  const target = 860;
-  return Math.min(278, target / (Math.max(1, brand.length) * 0.62));
+  const target = 862;   // 86% of the viewBox, as in the reference
+  return Math.min(360, target / (Math.max(1, brand.length) * AVG_CAP_ADVANCE));
 }
 
 export function HeroStage({ brand }: Props) {
@@ -96,28 +119,25 @@ export function HeroStage({ brand }: Props) {
         </mask>
       </defs>
 
-      {/* the panel, out of focus */}
+      {/* Both copies of the map are placed on the SAME rect, so the sharp
+          one lands exactly on top of the blurred one and the streets run
+          straight through the arch's edge. The lens does not magnify —
+          it only brings its area into focus.
+
+          The rect is outset past the panel because a blur samples beyond
+          its source and would otherwise fade out at the panel's edges;
+          the clip puts the boundary back. The sharp copy has to use the
+          same outset rect, not the bare panel, or `slice` would scale the
+          two differently and the image would jump at the arch. */}
       <g clipPath="url(#hs-panel)">
-        <image
-          href={mapImg}
-          x={PANEL.x - 14} y={PANEL.y - 14}
-          width={PANEL.w + 28} height={PANEL.h + 28}
-          preserveAspectRatio="xMidYMid slice"
-          filter="url(#hs-soft)"
-        />
+        <image {...IMG} filter="url(#hs-soft)" />
         <rect x={PANEL.x} y={PANEL.y} width={PANEL.w} height={PANEL.h}
           className="hs-panel-tint" />
       </g>
 
-      {/* the lens: the same map, sharp and slightly enlarged, so it reads
-          as magnification rather than as a hole cut in a blur */}
+      {/* the lens: the same map, same place, in focus */}
       <g clipPath="url(#hs-lens)">
-        <image
-          href={mapImg}
-          x={PANEL.x - PANEL.w * 0.09} y={PANEL.y - PANEL.h * 0.09}
-          width={PANEL.w * 1.18} height={PANEL.h * 1.18}
-          preserveAspectRatio="xMidYMid slice"
-        />
+        <image {...IMG} />
       </g>
 
       <rect x={PANEL.x} y={PANEL.y} width={PANEL.w} height={PANEL.h}
