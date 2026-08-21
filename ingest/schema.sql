@@ -168,4 +168,35 @@ GROUP BY cik, concept
 HAVING COUNT(*) = 4
    AND MAX(period_end) - MIN(period_end) BETWEEN 240 AND 300;
 
+-- Market data. Not in any filing: price, market cap and beta come from
+-- yfinance, which is scraping Yahoo's internal API rather than reading an
+-- official feed. Yahoo has broken it without warning before.
+--
+-- So this table is deliberately APPEND-ONLY and every row carries its own
+-- as_of. The frontend must show the last-known price WITH its date rather
+-- than hiding the section -- a silently stale price is the failure mode
+-- that matters, because sharePrice sets the premium in M&A and drives the
+-- "offer below market price" sanity check. A stale price moves that
+-- verdict without saying so.
+CREATE TABLE IF NOT EXISTS market_data (
+  ticker             VARCHAR(10) NOT NULL,
+  as_of              DATE        NOT NULL,
+  price              NUMERIC,
+  market_cap         NUMERIC,
+  shares_outstanding NUMERIC,
+  beta               NUMERIC,
+  currency           CHAR(3),
+  fetched_at         TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (ticker, as_of)
+);
+
+-- Latest row per ticker, with its age exposed so a consumer cannot read
+-- the price without also being able to read how old it is.
+CREATE OR REPLACE VIEW market_latest AS
+SELECT DISTINCT ON (ticker)
+  ticker, as_of, price, market_cap, shares_outstanding, beta, currency,
+  (CURRENT_DATE - as_of) AS age_days
+FROM market_data
+ORDER BY ticker, as_of DESC;
+
 COMMIT;
