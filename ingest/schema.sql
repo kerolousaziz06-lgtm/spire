@@ -53,6 +53,16 @@ CREATE TABLE IF NOT EXISTS financial_fact (
   accn         VARCHAR(25) NOT NULL,   -- accession number of the filing
   filed_date   DATE        NOT NULL,
 
+  -- US filers file 10-Qs for Q1-Q3 only; Q4 exists solely inside the 10-K,
+  -- folded into the annual figure. Measured on Apple: every fiscal year
+  -- carries exactly three quarters, never four, with no September period
+  -- in any year. So Q4 has to be synthesised, and a synthesised figure is
+  -- NOT a reported fact -- it is arithmetic over four of them. This flag
+  -- and a raw_tag of 'DERIVED: FY-(Q1+Q2+Q3)' keep that visible, because
+  -- a derived number that cannot be told apart from a filed one is how a
+  -- wrong figure survives review.
+  is_derived   BOOLEAN     NOT NULL DEFAULT FALSE,
+
   -- DEVIATION 2 -- fy/fp describe the FILING, not the fact. Renamed so the
   -- trap cannot be walked into again. Measured: the same FY2019 revenue
   -- fact carries fy=2019, fy=2020 and fy=2021 in three successive 10-Ks,
