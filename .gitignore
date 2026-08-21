@@ -19,8 +19,27 @@ dist-ssr
 .idea/
 *.swp
 
-# Agent tooling
+# Agent tooling. CLAUDE.md is prompting context, deliberately removed from
+# this repo and purged from its history -- ignored here so that a routine
+# `git add -A` cannot quietly put it back into a public repo.
 .claude/
+CLAUDE.md
+
+# --- Python data layer (ingest/) ---
+# Deliberately at ROOT rather than only inside ingest/. Root rules carry
+# no leading slash, so they match at any depth -- the ".env" rule above
+# already covers ingest/.env, verified with git check-ignore. Keeping it
+# in one file means one place to audit instead of two that can drift.
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Cached EDGAR/yfinance responses. Multi-MB, regenerable, and they are
+# raw third-party payloads that have no business in git.
+ingest/*.json
+!ingest/requirements.txt
 
 # TypeScript incremental build cache (created by npm run build)
 *.tsbuildinfo
