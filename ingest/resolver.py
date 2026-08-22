@@ -139,6 +139,8 @@ CONCEPT_SPECS: dict[str, ConceptSpec] = {
             # Combined balances, best first. Including current maturities
             # is the closest match to "all interest-bearing debt".
             "us-gaap:DebtAndCapitalLeaseObligations",
+            # Literally "long-term and short-term debt, combined".
+            "us-gaap:DebtLongtermAndShorttermCombinedAmount",
             "us-gaap:LongTermDebtAndCapitalLeaseObligationsIncludingCurrentMaturities",
             "us-gaap:LongTermDebt",
             "us-gaap:LongTermDebtAndCapitalLeaseObligations",
@@ -164,6 +166,11 @@ CONCEPT_SPECS: dict[str, ConceptSpec] = {
         # component is dropped -- so adding more here can REDUCE coverage
         # rather than raise it. Kept to the noncurrent/current pair that
         # actually partitions the balance.
+        #
+        # Two more near-misses found while widening this, both of which
+        # match a naive "debt" search and neither of which is a balance:
+        # GainsLossesOnExtinguishmentOfDebt is an INCOME STATEMENT item,
+        # and InterestExpenseLongTermDebt is the interest, not the debt.
         #
         # DO NOT add ProceedsFromIssuanceOfLongTermDebt or
         # RepaymentsOfLongTermDebt. Both appear on 5 of 10 filers that are

@@ -149,6 +149,11 @@ export function mapCompany(
     if (f.basis === 'annual') annualBasis.push(field);
   }
 
+  // Which fields had a row at all, as opposed to one that was rejected.
+  // The distinction matters below: a STALE debt figure means the company
+  // has debt and stopped tagging it, which is the opposite of having none.
+  const seen = new Set(usable.map((f) => CONCEPT_TO_FIELD[f.concept]));
+
   // ---- identities, not estimates -------------------------------------
   // Two figures are routinely absent from filings while both of their
   // components are present, and each follows from an accounting identity
@@ -180,12 +185,48 @@ export function mapCompany(
     derived.push({ field: 'totalLiabilities', from: 'total assets - equity' });
   }
 
+  // Total debt: absence of a tag is NOT the same as zero. It could mean
+  // the filer reports debt under a name the resolver does not know, and
+  // filling 0 there understates leverage and overstates ROIC -- a
+  // confidently wrong number, not a blank.
+  //
+  // It can be VERIFIED rather than assumed, on two conditions:
+  //
+  //   1. No debt concept resolved AT ALL. Not stale, not partial --
+  //      absent. A stale figure means the company HAS debt and stopped
+  //      tagging it, which is the opposite situation.
+  //   2. It pays no material interest. This is the independent check: a
+  //      company with borrowings pays for them. Checked against total
+  //      assets rather than an absolute, so it scales.
+  //
+  // Both hold for genuinely debt-free filers -- Datadog, HubSpot and
+  // Veeva publish no debt tag of any kind, only AvailableForSaleSecurities
+  // holdings, which are an asset. Recorded as derived, so a zero from
+  // this path is never mistaken for a reported zero.
+  const INTEREST_MATERIALITY = 0.001;   // 0.1% of total assets
+  if (input.totalDebt === null && !seen.has('totalDebt')
+      && input.totalAssets !== null && input.totalAssets > 0
+      && input.shareholdersEquity !== null) {
+    const interest = input.interestExpense;
+    const paysInterest = interest !== null
+      && Math.abs(interest) > INTEREST_MATERIALITY * input.totalAssets;
+    if (!paysInterest) {
+      input.totalDebt = 0;
+      asOf.totalDebt = asOf.totalAssets;
+      derived.push({
+        field: 'totalDebt',
+        from: interest === null
+          ? 'no debt reported under any tag'
+          : 'no debt reported under any tag, and interest paid is immaterial',
+      });
+    }
+  }
+
 
   // Every blank must be accounted for. A field that simply had no row is
   // just as blank as one withheld for staleness, and reporting only the
   // latter left "16 of 18 filled / 1 withheld" unable to explain the 18th
   // -- a blank with no reason reads as the tool being broken.
-  const seen = new Set(usable.map((f) => CONCEPT_TO_FIELD[f.concept]));
   const explained = new Set(blanked.map((b) => b.field));
   for (const field of Object.keys(EMPTY) as (keyof CompanyInput)[]) {
     if (field === 'sharePrice') continue;          // handled below, not filed
