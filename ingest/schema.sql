@@ -195,7 +195,11 @@ CREATE TABLE IF NOT EXISTS market_data (
 CREATE OR REPLACE VIEW market_latest AS
 SELECT DISTINCT ON (ticker)
   ticker, as_of, price, market_cap, shares_outstanding, beta, currency,
-  (CURRENT_DATE - as_of) AS age_days
+  -- market.py stamps as_of with the UTC date, so age must be measured
+  -- against the UTC date too. Comparing against CURRENT_DATE (server
+  -- local) returned age_days = -1 whenever the server was behind UTC,
+  -- and a negative age would have rendered as "-1 days old".
+  ((now() AT TIME ZONE 'UTC')::date - as_of) AS age_days
 FROM market_data
 ORDER BY ticker, as_of DESC;
 

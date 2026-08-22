@@ -10,10 +10,12 @@
     "verify:math": "esbuild scripts/verify-math.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/verify-math.mjs --log-level=error && node node_modules/.cache/verify-math.mjs"
   },
   "dependencies": {
+    "pg": "^8.23.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@types/pg": "^8.23.1",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",

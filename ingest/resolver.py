@@ -46,6 +46,14 @@ CONCEPT_SPECS: dict[str, ConceptSpec] = {
     "revenue": ConceptSpec("USD", (
         "us-gaap:RevenueFromContractWithCustomerExcludingAssessedTax",
         "us-gaap:RevenueFromContractWithCustomerIncludingAssessedTax",
+        # Banks. JPM publishes no RevenueFromContractWithCustomer* at all,
+        # and its us-gaap:Revenues has annual data to 2025 but QUARTERLY
+        # data only to 2014 -- so TTM built from it lands in 2014 and the
+        # staleness rule blanks revenue entirely. This is the tag a bank
+        # actually reports total revenue under, current to 2026-06-30.
+        # Safe at this position: it does not exist for non-banks, and the
+        # contract-revenue tags above do not exist for banks.
+        "us-gaap:RevenuesNetOfInterestExpense",
         "us-gaap:Revenues",
         "us-gaap:SalesRevenueNet",
         "us-gaap:SalesRevenueGoodsNet",
