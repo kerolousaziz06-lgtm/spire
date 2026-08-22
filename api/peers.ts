@@ -18,8 +18,14 @@ import { Pool, types } from 'pg';
 // that Postgres actually stored, so take it verbatim.
 types.setTypeParser(1082, (v) => v);
 
+// Deployed without a database, this is the expected state rather than an
+// error: the app is designed to work by hand and the ticker lookup is a
+// convenience. 503 says "not configured" so the UI can hide the control
+// instead of showing one that throws.
+const DSN = process.env.DATABASE_URL;
+
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: DSN,
   max: 1,
   idleTimeoutMillis: 10_000,
 });
@@ -58,6 +64,8 @@ export default async function handler(req: any, res: any) {
   if (!/^\d{3,4}$/.test(sic)) {
     return res.status(400).json({ error: 'sic must be 3 or 4 digits' });
   }
+
+  if (!DSN) return res.status(503).json({ error: 'data service not configured' });
 
   try {
     const { rows } = await pool.query(PEERS, [sic.padStart(4, '0')]);

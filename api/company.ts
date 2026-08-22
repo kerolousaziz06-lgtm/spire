@@ -16,8 +16,14 @@ import { Pool, types } from 'pg';
 types.setTypeParser(1082, (v) => v);
 import { mapCompany, type FactRow, type MarketRow } from './_lib/mapCompany';
 
+// Deployed without a database, this is the expected state rather than an
+// error: the app is designed to work by hand and the ticker lookup is a
+// convenience. 503 says "not configured" so the UI can hide the control
+// instead of showing one that throws.
+const DSN = process.env.DATABASE_URL;
+
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: DSN,
   max: 1,                       // serverless: one connection per instance
   idleTimeoutMillis: 10_000,
 });
@@ -44,6 +50,8 @@ export default async function handler(req: any, res: any) {
   if (!/^[A-Z][A-Z0-9.\-]{0,9}$/.test(raw)) {
     return res.status(400).json({ error: 'ticker must look like a ticker' });
   }
+
+  if (!DSN) return res.status(503).json({ error: 'data service not configured' });
 
   try {
     const who = await pool.query(IDENTITY, [raw]);

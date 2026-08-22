@@ -24,11 +24,25 @@ export function TickerFill({ onFill }: Props) {
   const [got, setGot] = useState<FetchedCompany | null>(null);
   const [showDetail, setShowDetail] = useState(false);
   const [loaded, setLoaded] = useState<LoadedTicker[]>([]);
+  // null = still asking. The control renders nothing until it knows a
+  // database is actually there.
+  const [available, setAvailable] = useState<boolean | null>(null);
 
   // Ask once what is available. Coverage is whatever the scheduled job has
   // ingested, and without this the field accepts anything and 404s on most
   // of it -- which reads as a broken tool rather than a partial database.
-  useEffect(() => { fetchLoadedTickers().then(setLoaded); }, []);
+  useEffect(() => {
+    fetchLoadedTickers().then((list) => {
+      setLoaded(list);
+      setAvailable(list.length > 0);
+    });
+  }, []);
+
+  // Hidden when no data service is reachable -- deployed without a
+  // database, or running `npm run dev` without `npm run dev:api`. Vantage
+  // is designed around typing the figures in; a lookup box that always
+  // fails makes a working app look broken.
+  if (available !== true) return null;
 
   async function run(e: React.FormEvent) {
     e.preventDefault();
