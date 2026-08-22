@@ -59,6 +59,16 @@ CONCEPT_SPECS: dict[str, ConceptSpec] = {
         "us-gaap:SalesRevenueGoodsNet",
     )),
     "gross_profit":     ConceptSpec("USD", ("us-gaap:GrossProfit",)),
+    # Not a CompanyInput field. Collected so gross profit can be derived
+    # as revenue - cost of revenue: 71% of filers report the cost line and
+    # never tag GrossProfit at all. Costco is typical -- 128 entries of
+    # CostOfGoodsAndServicesSold, and GrossProfit last used in 2019.
+    "cost_of_revenue": ConceptSpec("USD", (
+        "us-gaap:CostOfRevenue",
+        "us-gaap:CostOfGoodsAndServicesSold",
+        "us-gaap:CostOfGoodsSold",
+        "us-gaap:CostOfServices",
+    )),
     "operating_income": ConceptSpec("USD", ("us-gaap:OperatingIncomeLoss",)),
     "net_income":       ConceptSpec("USD", (
         "us-gaap:NetIncomeLoss",

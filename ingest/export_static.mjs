@@ -38,11 +38,35 @@ for (const { ticker } of list.tickers) {
   if (!res.ok) { console.error(`  ${ticker}: HTTP ${res.status}, skipped`); skipped++; continue; }
   const body = await res.json();
 
-  // Only publish a company that will actually be useful. A payload with
-  // almost nothing in it fills the sidebar with blanks and looks broken;
-  // leaving it out means an honest "not loaded" instead.
+  // Only publish a company that will actually be useful. A payload of
+  // mostly blanks fills the sidebar with nothing and reads as broken,
+  // where its absence reads as an honest "not loaded".
+  //
+  // The test is the three figures every operating company files, NOT a
+  // count. A count cannot tell a bank from a shell: JPMorgan legitimately
+  // fills 9 of 18 -- no gross profit, no classified balance sheet, no
+  // inventory -- while SEC's ticker map points XOM at a reorganisation
+  // shell that also fills 9, with a balance sheet and NO INCOME STATEMENT
+  // AT ALL. Requiring revenue, net income and total assets keeps every
+  // real filer and drops the shell.
+  // Requiring all three was too strict and dropped real filers: Broadcom,
+  // Mastercard, Caterpillar and Xcel each miss ONE of them for ordinary
+  // reasons, and a company at 9 of 18 is still useful -- JPMorgan sits
+  // there legitimately and the UI names every blank.
+  //
+  // The shell's actual signature is having NO INCOME STATEMENT AT ALL.
+  // SEC's ticker map points XOM at a reorganisation entity with a balance
+  // sheet and neither revenue nor net income; a real company always has
+  // at least one of the two.
+  if (body.input.revenue === null && body.input.netIncome === null) {
+    console.error(`  ${ticker}: no revenue AND no net income, skipped (shell or successor CIK)`);
+    skipped++; continue;
+  }
+  if (body.input.totalAssets === null) {
+    console.error(`  ${ticker}: no balance sheet, skipped`);
+    skipped++; continue;
+  }
   const filled = Object.values(body.input).filter((v) => v !== null).length;
-  if (filled < 8) { console.error(`  ${ticker}: only ${filled} figures, skipped`); skipped++; continue; }
 
   const json = JSON.stringify(body);
   writeFileSync(`${OUT}/${ticker}.json`, json);

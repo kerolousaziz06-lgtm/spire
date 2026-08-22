@@ -33,10 +33,27 @@ const IDENTITY = `SELECT cik, ticker, name, sic FROM company WHERE ticker = $1`;
 // Flows come from the TTM view, which only emits when four consecutive
 // quarters exist. Stocks are the most recent instant. UNION keeps them in
 // one shape without pretending they were derived the same way.
+// Three sources, in preference order, tagged so the caller knows which it
+// got. TTM is best -- it is the last twelve months. But it needs four
+// consecutive quarters, and plenty of filers never produce that: Broadcom,
+// Mastercard, Caterpillar and PNC all failed it, and dropping them would
+// have been far worse than showing their most recent FULL YEAR, which is
+// what a 10-K reports and what Vantage was built around in the first place.
+//
+// Stocks are point-in-time and have no annual equivalent; the latest
+// reading is the only sensible answer for them.
 const FACTS = `
-  SELECT concept, ttm_value AS value, as_of FROM ttm WHERE cik = $1
+  SELECT concept, ttm_value AS value, as_of, 'ttm' AS basis
+  FROM ttm WHERE cik = $1
   UNION ALL
-  SELECT concept, value, as_of FROM (
+  SELECT concept, value, as_of, 'annual' FROM (
+    SELECT DISTINCT ON (concept) concept, value, period_end AS as_of
+    FROM fact_current
+    WHERE cik = $1 AND period_kind = 'year' AND NOT is_derived
+    ORDER BY concept, period_end DESC
+  ) y
+  UNION ALL
+  SELECT concept, value, as_of, 'instant' FROM (
     SELECT DISTINCT ON (concept) concept, value, period_end AS as_of
     FROM fact_current WHERE cik = $1 AND period_kind = 'instant'
     ORDER BY concept, period_end DESC

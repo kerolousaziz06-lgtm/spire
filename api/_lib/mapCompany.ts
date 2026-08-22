@@ -12,7 +12,13 @@
 import type { CompanyInput } from '../../src/lib/analysis';
 
 /** One concept as stored: a value and the date it is "as of". */
-export type FactRow = { concept: string; value: string | number; as_of: string };
+export type FactRow = {
+  concept: string;
+  value: string | number;
+  as_of: string;
+  /** 'ttm' | 'annual' | 'instant' -- which source answered. */
+  basis?: string;
+};
 
 export type MarketRow = {
   price: string | number | null;
@@ -62,6 +68,10 @@ export type CompanyPayload = {
   meta: {
     asOf: Partial<Record<keyof CompanyInput, string>>;
     blanked: Blanked[];
+    /** Figures computed from an accounting identity rather than filed. */
+    derived: { field: keyof CompanyInput; from: string }[];
+    /** Fields answered by a full year rather than the last twelve months. */
+    annualBasis: (keyof CompanyInput)[];
     /** Price is scraped, not filed. Its age travels with it, always. */
     price: { value: number; asOf: string; ageDays: number } | null;
     priceNote?: string;
@@ -88,9 +98,33 @@ export function mapCompany(
   const asOf: Partial<Record<keyof CompanyInput, string>> = {};
   const blanked: Blanked[] = [];
 
+  // One row per concept, preferring the last twelve months over a full
+  // year over a point-in-time reading. Without this a company appears
+  // twice and the weaker basis can win by ordering alone.
+  const RANK: Record<string, number> = { ttm: 0, annual: 1, instant: 2 };
+  const best = new Map<string, FactRow>();
+  for (const f of facts) {
+    const cur = best.get(f.concept);
+    if (!cur || (RANK[f.basis ?? 'instant'] ?? 9) < (RANK[cur.basis ?? 'instant'] ?? 9)) {
+      best.set(f.concept, f);
+    }
+  }
+  facts = [...best.values()];
+
   const usable = facts.filter((f) => f.concept in CONCEPT_TO_FIELD);
+
+  // Concepts that are not CompanyInput fields but feed a derivation.
+  const usableExtra = new Map<string, number>();
+  const annualBasis: (keyof CompanyInput)[] = [];
   const newest = usable.reduce<string | null>(
     (n, f) => (n === null || f.as_of > n ? f.as_of : n), null);
+
+  for (const f of facts) {
+    if (f.concept !== 'cost_of_revenue') continue;
+    const v = typeof f.value === 'string' ? Number(f.value) : f.value;
+    const lag = newest ? days(newest, f.as_of) : 0;
+    if (Number.isFinite(v) && lag <= STALE_DAYS) usableExtra.set(f.concept, v);
+  }
 
   for (const f of usable) {
     const field = CONCEPT_TO_FIELD[f.concept];
@@ -112,7 +146,40 @@ export function mapCompany(
     }
     input[field] = value;
     asOf[field] = f.as_of;
+    if (f.basis === 'annual') annualBasis.push(field);
   }
+
+  // ---- identities, not estimates -------------------------------------
+  // Two figures are routinely absent from filings while both of their
+  // components are present, and each follows from an accounting identity
+  // that holds by definition. Deriving them is not a guess:
+  //
+  //     gross profit      = revenue - cost of revenue
+  //     total liabilities = total assets - shareholders equity
+  //
+  // 71% of filers never tag GrossProfit but do report the cost line, and
+  // a third omit Liabilities while reporting both sides of the balance
+  // sheet. Leaving these blank loses gross margin and every leverage
+  // ratio for those companies.
+  //
+  // Both are recorded in `derived` so provenance stays visible, and both
+  // require BOTH inputs to be present and fresh -- a derivation from a
+  // stale input would be the era-mixing the staleness rule exists to stop.
+  const derived: { field: keyof CompanyInput; from: string }[] = [];
+
+  const cost = usableExtra.get('cost_of_revenue') ?? null;
+  if (input.grossProfit === null && input.revenue !== null && cost !== null) {
+    input.grossProfit = input.revenue - cost;
+    asOf.grossProfit = asOf.revenue;
+    derived.push({ field: 'grossProfit', from: 'revenue - cost of revenue' });
+  }
+  if (input.totalLiabilities === null
+      && input.totalAssets !== null && input.shareholdersEquity !== null) {
+    input.totalLiabilities = input.totalAssets - input.shareholdersEquity;
+    asOf.totalLiabilities = asOf.totalAssets;
+    derived.push({ field: 'totalLiabilities', from: 'total assets - equity' });
+  }
+
 
   // Every blank must be accounted for. A field that simply had no row is
   // just as blank as one withheld for staleness, and reporting only the
@@ -150,5 +217,5 @@ export function mapCompany(
     priceNote = 'no market data on file';
   }
 
-  return { ...identity, input, meta: { asOf, blanked, price, priceNote } };
+  return { ...identity, input, meta: { asOf, blanked, derived, annualBasis, price, priceNote } };
 }

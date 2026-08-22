@@ -83,13 +83,25 @@ CREATE TABLE IF NOT EXISTS financial_fact (
   frame        TEXT,
 
   -- DEVIATION 3 -- period type is DERIVED from the dates, never read off
-  -- a label. Thresholds measured across 4 flow concepts on Apple, 823
-  -- period-bearing facts, zero unclassified:
+  -- a label.
   --
-  --     90d x380  97d x24     -> quarter   (97 = 53-week fiscal year)
-  --    181d x92  188d x20     -> half
-  --    272d x98  279d x20     -> ninemonth
-  --    363d x154 370d x35     -> year
+  -- The first bands were measured on APPLE ALONE and were too narrow.
+  -- Retailers run a 12-week fiscal calendar, so Costco's cumulative
+  -- periods are 84 / 168 / 252 / 364 days against Apple's 90 / 181 / 272
+  -- / 363. Its half and nine-month figures landed in 'other', which broke
+  -- the cumulative ladder, so Q4 was never derived and TTM produced
+  -- NOTHING -- despite 56 quarters of net income being present and
+  -- current. It exported at 9/18 fields and looked like a filer problem.
+  --
+  -- Re-measured across all 99 companies. Observed lengths:
+  --     83 88 89 90 91 92 97 98 111 118 121   -> quarter (111+ = a
+  --                                              16-week retail Q4)
+  --     165 167 179 180 181 182 183 188       -> half
+  --     251 270 271 272 273 274 279           -> ninemonth
+  --     363 364 365 370                       -> year
+  --
+  -- Bands are set with headroom to the observed edges and cannot overlap:
+  -- nothing legitimate falls in 126-159, 196-244 or 291-349.
   --
   -- DEVIATION 4 -- 'half' and 'ninemonth' are CUMULATIVE year-to-date
   -- figures, 230 of them in that sample. The spec does not mention them.
@@ -98,9 +110,9 @@ CREATE TABLE IF NOT EXISTS financial_fact (
   period_kind  TEXT GENERATED ALWAYS AS (
     CASE
       WHEN period_start IS NULL                        THEN 'instant'
-      WHEN period_end - period_start BETWEEN  80 AND 100 THEN 'quarter'
-      WHEN period_end - period_start BETWEEN 170 AND 190 THEN 'half'
-      WHEN period_end - period_start BETWEEN 260 AND 285 THEN 'ninemonth'
+      WHEN period_end - period_start BETWEEN  80 AND 125 THEN 'quarter'
+      WHEN period_end - period_start BETWEEN 160 AND 195 THEN 'half'
+      WHEN period_end - period_start BETWEEN 245 AND 290 THEN 'ninemonth'
       WHEN period_end - period_start BETWEEN 350 AND 380 THEN 'year'
       ELSE 'other'
     END
@@ -166,7 +178,11 @@ FROM ranked
 WHERE rn <= 4
 GROUP BY cik, concept
 HAVING COUNT(*) = 4
-   AND MAX(period_end) - MIN(period_end) BETWEEN 240 AND 300;
+   -- Four consecutive quarters span ~3 quarters end-to-end: ~270 days on
+   -- a calendar year, less on a 12-week retail one, more when a 16-week
+   -- Q4 is involved. Wide enough for both, still far short of the ~364
+   -- that a missing quarter would produce.
+   AND MAX(period_end) - MIN(period_end) BETWEEN 230 AND 310;
 
 -- Market data. Not in any filing: price, market cap and beta come from
 -- yfinance, which is scraping Yahoo's internal API rather than reading an
