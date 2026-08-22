@@ -1,10 +1,19 @@
 // ============================================================
-// tickerFetch.ts — pull a company's figures from /api/company.
+// tickerFetch.ts — load a company's figures.
 //
-// SAME-ORIGIN ONLY. This is the app's own API route, not a third party:
-// no key, no CORS, no external host. The "browser makes zero external
-// requests" property is intact; what changed is that the app now has a
-// backend of its own to ask.
+// READS STATIC FILES, not a live service. The figures come from quarterly
+// filings and do not change between ingests, so they ship with the site as
+// /data/companies/<TICKER>.json -- 1.3 KB each, cached at the edge, no
+// database, no credentials, nothing that can be down. Only the 4 KB index
+// loads on open; a company is fetched when you ask for it.
+//
+// SAME-ORIGIN ONLY. A static asset from the app's own origin: no key, no
+// CORS, no third party. The "browser makes no external requests" property
+// survives intact.
+//
+// api/company.ts still exists and produces exactly this shape -- the
+// export runs THROUGH it, so the mapping has one implementation. Point
+// this at the route instead if a live database is ever wanted.
 //
 // An API response is untrusted input, exactly like a localStorage
 // payload, and gets the same treatment: a reviver that must vouch for
@@ -80,6 +89,9 @@ export function reviveFetched(raw: unknown): FetchedCompany | null {
   };
 }
 
+/** Where the frozen figures live. Emitted by ingest/export_static.mjs. */
+const DATA_ROOT = '/data/companies';
+
 export type FetchResult =
   | { ok: true; company: FetchedCompany }
   | { ok: false; error: string };
@@ -91,17 +103,23 @@ export async function fetchTicker(ticker: string): Promise<FetchResult> {
   }
   let res: Response;
   try {
-    res = await fetch(`/api/company?ticker=${encodeURIComponent(t)}`);
+    res = await fetch(`${DATA_ROOT}/${encodeURIComponent(t)}.json`);
   } catch {
-    // Offline, or the API route is not deployed. Say so plainly rather
-    // than leaving a spinner running -- the app still works by hand.
-    return { ok: false, error: 'Could not reach the data service. Enter the figures by hand.' };
+    // Offline. Say so plainly rather than leaving a spinner running --
+    // the app still works by hand.
+    return { ok: false, error: 'Could not load company data. Enter the figures by hand.' };
   }
   if (res.status === 404) {
-    return { ok: false, error: `${t} is not in the database yet.` };
+    return { ok: false, error: `${t} is not in the data set.` };
   }
   if (!res.ok) {
     return { ok: false, error: `Lookup failed (${res.status}).` };
+  }
+  // A static host answers 200 with an HTML fallback for an unknown path,
+  // so a bad ticker can arrive looking like a success. The reviver below
+  // rejects it, but check the type first for a clearer message.
+  if (!(res.headers.get('content-type') ?? '').includes('json')) {
+    return { ok: false, error: `${t} is not in the data set.` };
   }
   let body: unknown;
   try {
@@ -156,7 +174,7 @@ export type LoadedTicker = { ticker: string; name: string };
  */
 export async function fetchLoadedTickers(): Promise<LoadedTicker[]> {
   try {
-    const res = await fetch('/api/tickers');
+    const res = await fetch(`${DATA_ROOT}/index.json`);
     if (!res.ok) return [];
     const body = (await res.json()) as unknown;
     if (!body || typeof body !== 'object') return [];

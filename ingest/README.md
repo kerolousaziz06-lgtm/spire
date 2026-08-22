@@ -57,6 +57,24 @@ In zsh, expand a ticker variable with `${=TICKERS}` — zsh does **not**
 word-split an unquoted `$TICKERS`, so all of them arrive as one argument and
 every ticker reports as unknown.
 
+## Freezing it into the site
+
+The shipped app does not query a database. Filings change quarterly, so the
+finished figures are exported to static files that deploy with the site:
+
+```bash
+npm run dev:api            # must be running, with DATABASE_URL
+npm run data:export        # -> public/data/companies/*.json
+```
+
+99 companies is ~130 KB, 1.3 KB each, plus a 4 KB index. Only the index
+loads on open. No database in production, no credentials, nothing to be
+down, and the browser still makes no external request.
+
+The export runs **through** `/api/company` rather than re-reading the
+database, so the payload shape has one implementation — `mapCompany.ts`.
+Re-run it after any ingest, and commit the result.
+
 ## Running the app against it
 
 ```bash
