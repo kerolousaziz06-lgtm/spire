@@ -12,7 +12,7 @@
 // ============================================================
 import { useEffect, useState } from 'react';
 import { FIELD_LABELS, type CompanyInput } from '../lib/analysis';
-import { fetchTicker, fetchLoadedTickers, type FetchedCompany, type LoadedTicker } from '../lib/tickerFetch';
+import { fetchTicker, fetchLoadedTickers, scaleToDisplayUnits, type FetchedCompany, type LoadedTicker } from '../lib/tickerFetch';
 import './TickerFill.css';
 
 type Props = { onFill: (input: CompanyInput) => void };
@@ -37,8 +37,10 @@ export function TickerFill({ onFill }: Props) {
     const res = await fetchTicker(ticker);
     setBusy(false);
     if (!res.ok) { setError(res.error); return; }
-    setGot(res.company);
-    onFill(res.company.input);
+    // Scale into the unit the sidebar is working in before handing it over.
+    const scaled = scaleToDisplayUnits(res.company.input);
+    setGot({ ...res.company, input: scaled });
+    onFill(scaled);
   }
 
   const filled = got
@@ -58,6 +60,11 @@ export function TickerFill({ onFill }: Props) {
           spellCheck={false}
           maxLength={10}
           list="tf-loaded"
+          // Looking up a second company is the common case, and the field
+          // keeps the previous ticker. Select on focus so typing replaces
+          // it instead of appending -- otherwise AAPL + NVDA becomes
+          // AAPLNVDA, which is a valid-looking ticker and a 404.
+          onFocus={(e) => e.currentTarget.select()}
         />
         <datalist id="tf-loaded">
           {loaded.map((t) => (

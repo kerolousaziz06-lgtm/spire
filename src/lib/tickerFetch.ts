@@ -12,6 +12,7 @@
 // being confidently rated is the failure this codebase keeps hitting.
 // ============================================================
 import { SAMPLE_INPUT, type CompanyInput, type CompanyField } from './analysis';
+import { unitDivisor } from './format';
 
 export type FetchedCompany = {
   ticker: string;
@@ -113,6 +114,34 @@ export async function fetchTicker(ticker: string): Promise<FetchResult> {
     return { ok: false, error: 'The data service returned an unexpected shape.' };
   }
   return { ok: true, company };
+}
+
+// sharePrice is per SHARE and already in actual currency, so it is the one
+// figure that must never be rescaled. Everything else is a statement-scale
+// quantity: dividing them all by the same divisor keeps every ratio, every
+// product (shares x price) and every per-share result identical, while the
+// figures land in the unit the user is actually working in.
+const NEVER_SCALED: ReadonlySet<CompanyField> = new Set(['sharePrice']);
+
+/**
+ * EDGAR reports in actual dollars; the app displays in billions by default.
+ * Without this a filled company reads 331839000000 where the sample reads
+ * 391, and the unit suffix elsewhere would label raw dollars as "B".
+ *
+ * This is a conversion FROM a known unit, which is why it is allowed where
+ * hand-typed figures are never rescaled -- there the app has no idea what
+ * unit the user meant, so the suffix stays a label.
+ */
+export function scaleToDisplayUnits(input: CompanyInput): CompanyInput {
+  const d = unitDivisor();
+  if (!Number.isFinite(d) || d <= 0) return input;
+  const out = { ...input };
+  for (const key of Object.keys(out) as CompanyField[]) {
+    const v = out[key];
+    if (v === null || NEVER_SCALED.has(key)) continue;
+    out[key] = v / d;
+  }
+  return out;
 }
 
 export type LoadedTicker = { ticker: string; name: string };

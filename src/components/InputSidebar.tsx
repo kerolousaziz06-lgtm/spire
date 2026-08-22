@@ -9,6 +9,7 @@
 import { useState } from 'react';
 import { FIELD_HINTS, FIELD_LABELS, OPTIONAL_FIELDS, reconcile, type CompanyInput, type CompanyField } from '../lib/analysis';
 import { TickerFill } from './TickerFill';
+import { fmtFieldValue, unitSuffix } from '../lib/format';
 import './InputSidebar.css';
 
 type Props = {
@@ -50,6 +51,17 @@ const GROUPS: { title: string; fields: CompanyField[] }[] = [
 export function InputSidebar({ input, onChange, onReset, collapsed, onToggle }: Props) {
   const [group, setGroup] = useState(0); // which statement group is open
 
+  // The field being edited, holding the LITERAL keystrokes.
+  //
+  // Controlling the input with the parsed number instead looks simpler and
+  // cannot work: "0." parses to 0, so the decimal point is discarded on the
+  // next render and typing 0.045 yields 45. Intermediate states have to
+  // survive, so the draft string is what the input shows while focused and
+  // the parsed number is what flows to state alongside it.
+  //
+  // Formatting is display only and is never written back.
+  const [editing, setEditing] = useState<{ key: CompanyField; draft: string } | null>(null);
+
   // Which fields take part in a failed check, and the first message for
   // each. Shown inline so the user is sent to the number to fix rather
   // than left to work it out from a summary elsewhere.
@@ -68,9 +80,19 @@ export function InputSidebar({ input, onChange, onReset, collapsed, onToggle }: 
   // "I haven't found this yet" indistinguishable from "this is genuinely
   // zero", and every metric downstream was computed from the 0.
   function setField(key: CompanyField, raw: string) {
+    // Strip grouping separators so a pasted "331,839" parses. Both
+    // locales are handled: en-US groups with "," and de-DE with ".", so
+    // the decimal mark is whichever separator appears LAST.
     const trimmed = raw.trim();
     if (trimmed === '') { onChange({ ...input, [key]: null }); return; }
-    const n = parseFloat(trimmed);
+    const lastComma = trimmed.lastIndexOf(',');
+    const lastDot = trimmed.lastIndexOf('.');
+    const decimalMark = lastComma > lastDot ? ',' : '.';
+    const cleaned = trimmed
+      .replace(decimalMark === ',' ? /\./g : /,/g, '')
+      .replace(',', '.')
+      .replace(/[^0-9.\-]/g, '');
+    const n = parseFloat(cleaned);
     onChange({ ...input, [key]: Number.isFinite(n) ? n : null });
   }
 
@@ -126,15 +148,39 @@ export function InputSidebar({ input, onChange, onReset, collapsed, onToggle }: 
                 {FIELD_LABELS[key]}
                 {optional && <span className="isb-optional">optional</span>}
               </span>
+              {/* type="text", not "number": a number input rejects the
+                  separators outright, so grouping is impossible in one.
+                  inputMode keeps the numeric keypad on touch. */}
               <input
                 className={`isb-input tabular ${blank && !optional ? 'is-blank' : ''} ${flag ? 'is-' + flag.severity : ''}`}
-                type="number"
-                value={input[key] ?? ''}
-                onChange={(e) => setField(key, e.target.value)}
-                step="any"
+                type="text"
+                inputMode="decimal"
+                value={
+                  editing?.key === key
+                    ? editing.draft
+                    : (input[key] === null ? '' : fmtFieldValue(input[key] as number))
+                }
+                onFocus={(e) => {
+                  // Swapping the string on focus re-renders and discards
+                  // the browser's selection, so click-and-type landed
+                  // inside the old value rather than replacing it.
+                  // Re-select once the swap has painted.
+                  const el = e.currentTarget;
+                  setEditing({ key, draft: String(input[key] ?? '') });
+                  requestAnimationFrame(() => el.select());
+                }}
+                onBlur={() => setEditing(null)}
+                onChange={(e) => {
+                  setEditing({ key, draft: e.target.value });
+                  setField(key, e.target.value);
+                }}
                 placeholder={optional ? '\u2014' : 'required'}
                 aria-describedby={`hint-${key}`}
               />
+              {/* The unit these figures are in. Without it a bare 331,839
+                  is ambiguous, and the app deliberately never converts
+                  hand-typed figures -- so it has to say what it assumes. */}
+              <span className="isb-unit" aria-hidden="true">{unitSuffix()}</span>
               {/* Where to find it on a filing. Several of these are not
                   single line items, which was the slowest part of entry. */}
               {flag

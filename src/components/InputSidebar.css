@@ -159,3 +159,21 @@
 .isb-flag--caution { color: var(--warn); }
 .isb-input.is-error { border-color: var(--loss); }
 .isb-input.is-caution { border-color: var(--warn); }
+
+/* The unit these figures are in. Sits with the field rather than in a
+   header: the sidebar scrolls, and a unit you cannot see while typing is
+   a unit you will get wrong. */
+.isb-unit {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
+}
+.isb-field { position: relative; }
+/* Keep the value clear of the suffix. */
+.isb-input { padding-right: 26px; }

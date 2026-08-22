@@ -82,6 +82,17 @@ export const UNIT_SUFFIX: Record<Units, string> = {
   thousands: 'K',
 };
 
+// How many actual dollars one displayed unit represents. Used ONLY when
+// importing figures from a source whose unit is known -- EDGAR reports in
+// actual dollars -- so they can be expressed in whatever unit the user is
+// working in. Hand-typed figures are never rescaled: the suffix stays a
+// label, and the user decides what it labels.
+export const UNIT_DIVISOR: Record<Units, number> = {
+  billions: 1_000_000_000,
+  millions: 1_000_000,
+  thousands: 1_000,
+};
+
 export const UNIT_LOCALE: Record<NumberFormat, string> = {
   us: 'en-US',   // 1,234.56
   eu: 'de-DE',   // 1.234,56
