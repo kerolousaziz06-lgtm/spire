@@ -20,6 +20,7 @@ import json
 import os
 import sys
 import time
+from pathlib import Path
 from dataclasses import dataclass
 
 import psycopg2
@@ -189,7 +190,11 @@ def main(tickers: list[str]) -> int:
                       f"check for a predecessor CIK before trusting {c.ticker}")
 
         print("\nderiving quarters ...")
-        with conn.cursor() as cur, open("derive_quarters.sql") as f:
+        # Relative to THIS FILE, not the working directory: CI runs
+        # `python ingest/ingest.py` from the repo root, where a bare
+        # "derive_quarters.sql" does not exist.
+        sql_path = Path(__file__).resolve().parent / "derive_quarters.sql"
+        with conn.cursor() as cur, open(sql_path) as f:
             cur.execute(f.read())
             conn.commit()
             cur.execute("SELECT count(*) FROM financial_fact WHERE is_derived")

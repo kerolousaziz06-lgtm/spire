@@ -1,0 +1,132 @@
+name: Refresh company data
+
+# Weekly. Filings only change quarterly, so the thing this actually keeps
+# current is share prices -- daily would be overkill for a portfolio piece
+# and would bury the commit history under bot commits.
+on:
+  schedule:
+    - cron: '17 6 * * 1'        # Mondays 06:17 UTC, off the hour to avoid
+                                # the stampede every other cron runs into
+  workflow_dispatch:             # and a manual button
+
+permissions:
+  contents: write                # it commits the refreshed data
+
+concurrency:
+  group: refresh-data            # never two ingests racing the same branch
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    # Postgres exists only for the length of this job. The pipeline needs a
+    # database to resolve restatements and rebuild quarters; the SITE does
+    # not, which is why the output is committed as static files.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: spire
+          POSTGRES_PASSWORD: spire
+          POSTGRES_DB: spire
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgres://spire:spire@127.0.0.1:5432/spire
+      SEC_CONTACT: ${{ secrets.SEC_CONTACT }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fail early if the SEC contact is missing
+        # SEC requires a real contact address and blocks a fake one. Better
+        # to stop here than to be rate-limited into a half-finished dataset.
+        run: |
+          if [ -z "$SEC_CONTACT" ]; then
+            echo "SEC_CONTACT secret is not set. Add it under"
+            echo "Settings -> Secrets and variables -> Actions."
+            exit 1
+          fi
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install
+        run: |
+          pip install -r ingest/requirements.txt
+          npm ci
+
+      - name: Record the current size, to compare against later
+        id: before
+        # find, not `ls | grep -c`: grep exits 1 when it matches nothing,
+        # which under bash -e kills the step on a first-ever run.
+        run: |
+          COUNT=$(find public/data/companies -name '*.json' ! -name 'index.json' | wc -l)
+          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+
+      - name: Build schema
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f ingest/schema.sql
+
+      - name: Ingest EDGAR
+        run: |
+          # Rate limited to 10 req/sec inside ingest.py; ~2.5 min for 190.
+          grep -vE '^\s*(#|$)' ingest/tickers.txt | tr '\n' ' ' | xargs python ingest/ingest.py
+
+      - name: Fetch market data
+        # yfinance scrapes Yahoo and can break without warning. A price
+        # failure must not sink the run: the previous prices stay published
+        # and every price carries its own as-of date on screen.
+        continue-on-error: true
+        run: |
+          grep -vE '^\s*(#|$)' ingest/tickers.txt | tr '\n' ' ' \
+            | xargs python ingest/market.py --sql > /tmp/market.sql
+          psql "$DATABASE_URL" -f /tmp/market.sql
+
+      - name: Export static files
+        run: |
+          node ingest/devapi.mjs &
+          for i in $(seq 1 30); do
+            curl -sf http://127.0.0.1:3001/api/tickers >/dev/null && break
+            sleep 1
+          done
+          node ingest/export_static.mjs
+
+      - name: Refuse a run that lost companies
+        # A partial SEC outage would otherwise quietly publish a much
+        # smaller dataset and the site would silently lose coverage. Better
+        # to fail and keep last week's data than to ship a worse week.
+        run: |
+          BEFORE=${{ steps.before.outputs.count }}
+          AFTER=$(find public/data/companies -name '*.json' ! -name 'index.json' | wc -l)
+          echo "before=$BEFORE after=$AFTER"
+          if [ "$BEFORE" -gt 0 ] && [ "$AFTER" -lt $((BEFORE * 9 / 10)) ]; then
+            echo "published set shrank from $BEFORE to $AFTER (>10% loss); not committing"
+            exit 1
+          fi
+
+      - name: Verify the app still builds with the new data
+        run: npm run build
+
+      - name: Commit if anything changed
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add public/data
+          if git diff --cached --quiet; then
+            echo "no change; nothing to commit"
+            exit 0
+          fi
+          N=$(find public/data/companies -name '*.json' ! -name 'index.json' | wc -l)
+          git commit -m "data: weekly refresh ($N companies, $(date -u +%Y-%m-%d))"
+          git push
