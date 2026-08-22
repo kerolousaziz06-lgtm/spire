@@ -82,6 +82,13 @@ CONCEPT_SPECS: dict[str, ConceptSpec] = {
         "us-gaap:InterestExpense",
         "us-gaap:InterestExpenseDebt",
         "us-gaap:InterestAndDebtExpense",
+        "us-gaap:InterestExpenseNonoperating",
+        "us-gaap:InterestExpenseBorrowings",
+        # NOT InterestIncomeExpenseNet or InterestIncomeExpenseNonoperatingNet.
+        # Those are interest income MINUS expense, a different quantity that
+        # is frequently positive -- Apple earns more interest than it pays.
+        # ROIC derives its tax rate from operating income minus interest
+        # EXPENSE, so a net figure there silently inverts the adjustment.
     )),
     "current_assets":      ConceptSpec("USD", ("us-gaap:AssetsCurrent",)),
     "current_liabilities": ConceptSpec("USD", ("us-gaap:LiabilitiesCurrent",)),
@@ -129,8 +136,12 @@ CONCEPT_SPECS: dict[str, ConceptSpec] = {
     )),
     "total_debt": ConceptSpec("USD",
         tags=(
+            # Combined balances, best first. Including current maturities
+            # is the closest match to "all interest-bearing debt".
             "us-gaap:DebtAndCapitalLeaseObligations",
+            "us-gaap:LongTermDebtAndCapitalLeaseObligationsIncludingCurrentMaturities",
             "us-gaap:LongTermDebt",
+            "us-gaap:LongTermDebtAndCapitalLeaseObligations",
         ),
         # Apple has no DebtCurrent at all, so components must tolerate
         # absences and sum only what exists, per period_end.
@@ -149,8 +160,20 @@ CONCEPT_SPECS: dict[str, ConceptSpec] = {
         # cap - cash. Whether a filer with a complete balance sheet and no
         # debt tag should be READ as zero is a real question and is
         # deliberately left open rather than silently decided here.
+        # Components are SUMMED, and a period missing from any present
+        # component is dropped -- so adding more here can REDUCE coverage
+        # rather than raise it. Kept to the noncurrent/current pair that
+        # actually partitions the balance.
+        #
+        # DO NOT add ProceedsFromIssuanceOfLongTermDebt or
+        # RepaymentsOfLongTermDebt. Both appear on 5 of 10 filers that are
+        # missing total_debt, and both are CASH FLOWS -- the borrowing and
+        # repayment activity of the period, not the balance outstanding.
+        # Filing a year's issuance as the debt balance would be wrong in
+        # the plausible-looking way this codebase keeps guarding against.
         components=(
             "us-gaap:LongTermDebtNoncurrent",
+            "us-gaap:LongTermDebtCurrent",
             "us-gaap:DebtCurrent",
             "us-gaap:ShortTermBorrowings",
             "us-gaap:NotesPayableCurrent",
