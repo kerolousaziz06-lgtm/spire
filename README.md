@@ -9,7 +9,9 @@ Self-contained, browser-based financial analysis. Four modules, switchable from 
 
 Every number carries its interpretation: the value, a plain-English meaning, and a good/average/bad rating. A bare ratio could come from anywhere.
 
-Everything runs entirely in the browser. No backend, no API keys, no external requests of any kind — verified with all non-local hosts blocked. All the math is in the code, and `npm run verify:math` re-checks every engine against hand-computed cases.
+All the math runs in the browser and is in the code — `npm run verify:math` re-checks every engine against hand-computed cases. **The frontend makes no third-party requests**: no API keys, no CDN, no analytics, and the typefaces are bundled rather than fetched, verified with all non-local hosts blocked.
+
+Vantage can optionally pre-fill a company from a ticker. That calls `/api/company` on this app's own origin — no key and no cross-origin request — backed by a Python job in [`ingest/`](ingest/) that loads SEC EDGAR filings into Postgres on a schedule. It is a convenience, not a dependency: every field stays editable, and with the API unreachable the app works exactly as before, by hand.
 
 ## Run it
 

@@ -114,6 +114,23 @@ export function mapCompany(
     asOf[field] = f.as_of;
   }
 
+  // Every blank must be accounted for. A field that simply had no row is
+  // just as blank as one withheld for staleness, and reporting only the
+  // latter left "16 of 18 filled / 1 withheld" unable to explain the 18th
+  // -- a blank with no reason reads as the tool being broken.
+  const seen = new Set(usable.map((f) => CONCEPT_TO_FIELD[f.concept]));
+  const explained = new Set(blanked.map((b) => b.field));
+  for (const field of Object.keys(EMPTY) as (keyof CompanyInput)[]) {
+    if (field === 'sharePrice') continue;          // handled below, not filed
+    if (input[field] !== null || explained.has(field)) continue;
+    blanked.push({
+      field,
+      reason: seen.has(field)
+        ? 'reported, but no trailing-twelve-month figure could be formed'
+        : 'not reported in a form this filer uses',
+    });
+  }
+
   let price: CompanyPayload['meta']['price'] = null;
   let priceNote: string | undefined;
   if (market && market.price !== null) {

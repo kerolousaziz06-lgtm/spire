@@ -1,0 +1,70 @@
+/* TickerFill — sits above the statement groups in Vantage's sidebar. */
+.tf { padding: 12px 14px; border-bottom: 1px solid var(--border); }
+
+.tf-row { display: flex; gap: 6px; }
+
+.tf-input {
+  flex: 1; min-width: 0;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase;
+  padding: 6px 8px;
+}
+.tf-input:focus { outline: none; border-color: var(--border-strong); }
+.tf-input::placeholder { color: var(--text-muted); }
+
+/* Active state inverts to dark ink on bone, like every other primary
+   control in the suite. Never color:#fff -- white on bone is invisible. */
+.tf-btn {
+  background: var(--accent); color: var(--bg-base);
+  border: none; border-radius: var(--r-sm);
+  font-family: var(--font-mono);
+  font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+  padding: 6px 12px; cursor: pointer;
+}
+.tf-btn:disabled { opacity: 0.4; cursor: default; }
+
+.tf-error, .tf-count, .tf-price, .tf-name { margin: 8px 0 0; }
+
+.tf-error { color: var(--loss); font-size: 12px; line-height: 1.4; }
+
+.tf-name {
+  color: var(--text-primary); font-size: 12px; font-weight: 500;
+}
+
+.tf-count, .tf-price {
+  font-family: var(--font-mono);
+  font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* A stale price is the one number here that can silently mislead, so it
+   is marked rather than left to read like the rest. */
+.tf-stale { color: var(--warn); }
+
+/* Clauses wrap between themselves, never inside one. Mono at 0.12em
+   tracking is wide enough that a date will otherwise break in half. */
+.tf-price span { white-space: nowrap; }
+
+.tf-more {
+  background: none; border: none; padding: 0 0 0 8px;
+  color: var(--text-secondary); cursor: pointer;
+  font-family: var(--font-mono); font-size: 10px;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  text-decoration: underline;
+}
+
+.tf-blanked { list-style: none; margin: 8px 0 0; padding: 0; }
+.tf-blanked li {
+  display: flex; flex-direction: column; gap: 1px;
+  padding: 5px 0; border-top: 1px solid var(--border);
+}
+.tf-field {
+  color: var(--text-secondary); font-size: 11px;
+}
+.tf-reason {
+  color: var(--text-muted); font-size: 10px; line-height: 1.35;
+}

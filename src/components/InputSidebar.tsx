@@ -8,6 +8,7 @@
 // ============================================================
 import { useState } from 'react';
 import { FIELD_HINTS, FIELD_LABELS, OPTIONAL_FIELDS, reconcile, type CompanyInput, type CompanyField } from '../lib/analysis';
+import { TickerFill } from './TickerFill';
 import './InputSidebar.css';
 
 type Props = {
@@ -93,6 +94,12 @@ export function InputSidebar({ input, onChange, onReset, collapsed, onToggle }: 
         </div>
         <button className="isb-collapse" onClick={onToggle} aria-label="Collapse inputs">‹</button>
       </div>
+
+      {/* Fill from a ticker. Above the groups because it replaces what is
+          below it -- a control that overwrites should be seen before the
+          thing it overwrites, not discovered after. Every field stays
+          editable, so this is a starting point, not a lock. */}
+      <TickerFill onFill={onChange} />
 
       {/* group tabs */}
       <div className="isb-groups">
