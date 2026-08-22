@@ -4,7 +4,6 @@ ingest.py — fetch EDGAR facts for a list of tickers and load them into Postgre
 Run:
     SEC_CONTACT="you@example.com" DATABASE_URL="postgres://..." \
         ./.venv/bin/python ingest.py AAPL JPM MSFT
-    ... --sic 6021        # or ingest every ticker EDGAR files under one SIC
 
 Order matters and is enforced: facts land first, then derive_quarters.sql
 runs, then market.py. Deriving before the facts exist produces nothing;
@@ -201,7 +200,18 @@ def main(tickers: list[str]) -> int:
 
 
 if __name__ == "__main__":
-    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    # Unknown flags are an ERROR, never silently dropped. The first
+    # version filtered anything starting with "--" and an earlier
+    # docstring advertised a --sic flag that was never implemented: the
+    # flag vanished and its VALUE was then treated as a ticker, so
+    # `ingest.py --sic 6021` looked like it worked and quietly ingested
+    # nothing while reporting 6021 as an unknown ticker.
+    args, flags = [], []
+    for a in sys.argv[1:]:
+        (flags if a.startswith("-") else args).append(a)
+    if flags:
+        sys.exit(f"unrecognised option(s): {' '.join(flags)}\n"
+                 "usage: ingest.py TICKER [TICKER ...]")
     if not args:
         sys.exit("usage: ingest.py TICKER [TICKER ...]")
     sys.exit(1 if main(args) else 0)

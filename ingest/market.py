@@ -32,7 +32,7 @@ class Quote:
     ticker: str
     as_of: date
     price: float
-    market_cap: float
+    market_cap: float | None
     shares_outstanding: float | None
     beta: float | None
     currency: str
@@ -67,8 +67,11 @@ def fetch(ticker: str) -> tuple[Quote | None, str]:
 
     if price is None or price <= 0:
         return None, "no usable price"
-    if cap is None or cap <= 0:
-        return None, "no usable market cap"
+    # Market cap is optional: Salesforce returns none at all, and a price
+    # with no cap is still worth having -- Vantage needs sharePrice, and a
+    # missing cap only means /api/peers omits that row's multiples.
+    if cap is not None and cap <= 0:
+        cap = None
     if currency is None or len(currency) != 3:
         return None, f"unusable currency: {info.get('currency')!r}"
 
@@ -77,12 +80,25 @@ def fetch(ticker: str) -> tuple[Quote | None, str]:
         implied = price * shares
         drift = abs(implied - cap) / cap
         if drift > RECONCILE_TOLERANCE:
-            # Do not silently prefer one field over the other. Either the
-            # scrape is degraded or the fields are from different moments;
-            # both mean the row should not be trusted as a unit.
-            return None, (f"price x shares does not reconcile to market cap: "
-                          f"{implied:,.0f} vs {cap:,.0f} ({drift:.2%} apart)")
-        note = f"reconciles to {drift:.4%}"
+            # They disagree, and we cannot tell WHICH is wrong. The most
+            # common cause is a dual-class structure: Atlassian's shares
+            # figure counts one class while its market cap counts both,
+            # putting them 37% apart -- there the cap is right and the
+            # share count is partial. Elsewhere the reverse can hold.
+            #
+            # So keep the PRICE, which is directly observed and does not
+            # depend on either, and drop the two that contradict each
+            # other. Preferring one silently is how a wrong market cap
+            # reaches an EV and then a multiple. shares_outstanding is in
+            # any case taken from EDGAR downstream, not from here.
+            note = (f"market cap and share count disagree by {drift:.1%} "
+                    f"(dual-class or a degraded scrape); both dropped, "
+                    f"price kept")
+            cap, shares = None, None
+        else:
+            note = f"reconciles to {drift:.4%}"
+    elif cap is None:
+        note = "no market cap returned; price only"
     else:
         note = "no share count returned; reconciliation skipped"
 
@@ -120,12 +136,12 @@ if __name__ == "__main__":
         if emit_sql:
             print(as_sql(q))
         else:
+            fmt = lambda v, d=0: f"{v:,.{d}f}" if v is not None else "n/a"
             print(f"{q.ticker}  as_of {q.as_of}  {q.currency}")
-            print(f"   price       {q.price:,.2f}")
-            print(f"   market cap  {q.market_cap:,.0f}")
-            print(f"   shares      {q.shares_outstanding:,.0f}"
-                  if q.shares_outstanding else "   shares      n/a")
-            print(f"   beta        {q.beta}")
+            print(f"   price       {fmt(q.price, 2)}")
+            print(f"   market cap  {fmt(q.market_cap)}")
+            print(f"   shares      {fmt(q.shares_outstanding)}")
+            print(f"   beta        {q.beta if q.beta is not None else 'n/a'}")
             print(f"   {q.note}")
     if failures:
         print(f"-- {failures}/{len(args)} skipped", file=sys.stderr)

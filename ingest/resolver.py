@@ -124,6 +124,21 @@ CONCEPT_SPECS: dict[str, ConceptSpec] = {
         ),
         # Apple has no DebtCurrent at all, so components must tolerate
         # absences and sum only what exists, per period_end.
+        #
+        # DO NOT widen this by matching on "Debt". Datadog, HubSpot and
+        # Veeva each carry a dozen tags containing the word -- every one
+        # of them AvailableForSaleSecuritiesDebtSecurities and relatives,
+        # which are debt securities the company OWNS as investments. An
+        # asset. A substring match would file a company's investment
+        # portfolio as its borrowings and inflate enterprise value by
+        # billions, while looking entirely reasonable.
+        #
+        # Those three genuinely carry no debt, which is why total_debt is
+        # absent for them rather than zero. Absence here means "no tag
+        # resolved", NOT "zero" -- EV is omitted rather than computed as
+        # cap - cash. Whether a filer with a complete balance sheet and no
+        # debt tag should be READ as zero is a real question and is
+        # deliberately left open rather than silently decided here.
         components=(
             "us-gaap:LongTermDebtNoncurrent",
             "us-gaap:DebtCurrent",
