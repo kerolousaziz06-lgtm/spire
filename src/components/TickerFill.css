@@ -31,6 +31,14 @@
 
 .tf-error { color: var(--loss); font-size: 12px; line-height: 1.4; }
 
+/* States what the field can actually answer, so coverage is visible
+   before a lookup rather than discovered through a failed one. */
+.tf-avail {
+  font-family: var(--font-mono);
+  font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--text-muted);
+}
+
 .tf-name {
   color: var(--text-primary); font-size: 12px; font-weight: 500;
 }

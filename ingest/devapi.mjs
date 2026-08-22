@@ -10,7 +10,7 @@ import { writeFileSync, mkdirSync } from 'node:fs';
 
 mkdirSync('node_modules/.cache', { recursive: true });
 const routes = {};
-for (const name of ['company', 'peers']) {
+for (const name of ['company', 'peers', 'tickers']) {
   const out = `node_modules/.cache/api-${name}.mjs`;
   await build({
     entryPoints: [`api/${name}.ts`], bundle: true, platform: 'node',

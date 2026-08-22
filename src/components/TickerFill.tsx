@@ -10,9 +10,9 @@
 // stopped tagging, or one no filing contains), and saying so is what
 // stops a user reading a blank as "the tool is broken".
 // ============================================================
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { FIELD_LABELS, type CompanyInput } from '../lib/analysis';
-import { fetchTicker, type FetchedCompany } from '../lib/tickerFetch';
+import { fetchTicker, fetchLoadedTickers, type FetchedCompany, type LoadedTicker } from '../lib/tickerFetch';
 import './TickerFill.css';
 
 type Props = { onFill: (input: CompanyInput) => void };
@@ -23,6 +23,12 @@ export function TickerFill({ onFill }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [got, setGot] = useState<FetchedCompany | null>(null);
   const [showDetail, setShowDetail] = useState(false);
+  const [loaded, setLoaded] = useState<LoadedTicker[]>([]);
+
+  // Ask once what is available. Coverage is whatever the scheduled job has
+  // ingested, and without this the field accepts anything and 404s on most
+  // of it -- which reads as a broken tool rather than a partial database.
+  useEffect(() => { fetchLoadedTickers().then(setLoaded); }, []);
 
   async function run(e: React.FormEvent) {
     e.preventDefault();
@@ -51,13 +57,23 @@ export function TickerFill({ onFill }: Props) {
           aria-label="Ticker symbol"
           spellCheck={false}
           maxLength={10}
+          list="tf-loaded"
         />
+        <datalist id="tf-loaded">
+          {loaded.map((t) => (
+            <option key={t.ticker} value={t.ticker}>{t.name}</option>
+          ))}
+        </datalist>
         <button className="tf-btn" type="submit" disabled={busy || !ticker.trim()}>
           {busy ? '…' : 'Fill'}
         </button>
       </form>
 
       {error && <p className="tf-error">{error}</p>}
+
+      {loaded.length > 0 && !got && !error && (
+        <p className="tf-avail">{loaded.length} companies loaded</p>
+      )}
 
       {got && (
         <div className="tf-result">

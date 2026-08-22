@@ -48,9 +48,13 @@ export default async function handler(req: any, res: any) {
   try {
     const who = await pool.query(IDENTITY, [raw]);
     if (who.rowCount === 0) {
+      // Say how many ARE loaded. "Not in the database" alone leaves the
+      // user unable to tell a missing company from a broken service.
+      const n = await pool.query(`SELECT count(*)::int AS n FROM company`);
       return res.status(404).json({
-        error: `${raw} is not in the database`,
-        hint: 'ingestion runs on a schedule; not every ticker is loaded',
+        error: `${raw} has not been ingested yet`,
+        hint: `${n.rows[0].n} companies are loaded; ingestion runs on a schedule`,
+        loaded: n.rows[0].n,
       });
     }
     const { cik, ticker, name, sic } = who.rows[0];

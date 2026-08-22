@@ -114,3 +114,32 @@ export async function fetchTicker(ticker: string): Promise<FetchResult> {
   }
   return { ok: true, company };
 }
+
+export type LoadedTicker = { ticker: string; name: string };
+
+/**
+ * What the database actually holds. Used to populate the field's
+ * suggestions, so the control advertises its own coverage instead of
+ * letting the user discover it one 404 at a time.
+ *
+ * Failure is silent on purpose: no suggestions is a smaller problem than
+ * an error banner about a list nobody asked for, and typing still works.
+ */
+export async function fetchLoadedTickers(): Promise<LoadedTicker[]> {
+  try {
+    const res = await fetch('/api/tickers');
+    if (!res.ok) return [];
+    const body = (await res.json()) as unknown;
+    if (!body || typeof body !== 'object') return [];
+    const list = (body as { tickers?: unknown }).tickers;
+    if (!Array.isArray(list)) return [];
+    return list.flatMap((r) => {
+      const o = r as Record<string, unknown>;
+      return typeof o?.ticker === 'string' && typeof o?.name === 'string'
+        ? [{ ticker: o.ticker, name: o.name }]
+        : [];
+    });
+  } catch {
+    return [];
+  }
+}
