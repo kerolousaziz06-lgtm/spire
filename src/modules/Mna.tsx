@@ -9,12 +9,13 @@
 // would be the entry burden that ruled Comps out. Every field stays
 // editable for a company nobody wants to save.
 // ============================================================
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Card } from '../components/Card';
 import { MissingData } from '../components/MissingData';
 import { runMna, type MnaCompany, type MnaDeal } from '../lib/mna';
 import { FIELD_LABELS, type CompanyInput, type CompanyField } from '../lib/analysis';
 import type { CompanyPreset } from '../lib/presets';
+import { fetchTicker, fetchLoadedTickers, scaleToDisplayUnits, type LoadedTicker } from '../lib/tickerFetch';
 import { fmtMoney, fmtPct, fmtPctSigned } from '../lib/format';
 import './Mna.css';
 
@@ -112,6 +113,24 @@ export function Mna({ state, onState, onReset, presets, currentCompany }: Props)
         <SidePanel
           role="Target" side={target} presets={presets} currentCompany={currentCompany}
           onChange={(next) => setSide('target', next)}
+          // Filling the target from a ticker leaves the offer at whatever
+          // it was -- against a real share price that is usually an absurd
+          // take-under, and the deal opens flagged. Anchor it to the
+          // target's own market price: a factual starting point at 0%
+          // premium, not an invented one.
+          //
+          // ONE state update, not two. Setting the side and the deal
+          // separately made both derive from the same captured state, so
+          // the second reverted the first: the target went back to its $20
+          // default while the offer became $214.72, and the panel read
+          // "973.6% premium" instead of 0%.
+          onFilled={(label, company) => onState({
+            ...state,
+            target: { label, company },
+            deal: company.sharePrice > 0
+              ? { ...deal, offerPricePerShare: company.sharePrice }
+              : deal,
+          })}
           eps={r.targetEps} pe={r.targetPeAtOffer} peLabel="P/E at offer"
         />
 
@@ -220,12 +239,29 @@ export function Mna({ state, onState, onReset, presets, currentCompany }: Props)
 
 // ---- one company ----------------------------------------------------
 
-function SidePanel({ role, side, presets, currentCompany, onChange, eps, pe, peLabel = 'P/E' }: {
+function SidePanel({ role, side, presets, currentCompany, onChange, onFilled, eps, pe, peLabel = 'P/E' }: {
   role: string; side: MnaSide; presets: CompanyPreset[]; currentCompany: CompanyInput;
-  onChange: (next: MnaSide) => void; eps: number; pe: number | null; peLabel?: string;
+  onChange: (next: MnaSide) => void;
+  /**
+   * Target side only. Replaces onChange when filling from a filing so the
+   * side and the offer move in a SINGLE update -- two updates built from
+   * one captured state overwrite each other.
+   */
+  onFilled?: (label: string, company: MnaCompany) => void;
+  eps: number; pe: number | null; peLabel?: string;
 }) {
   const [sourceOpen, setSourceOpen] = useState(false);
   const fromCurrent = companyFromInput(currentCompany);
+
+  // Filings as a third source, alongside the current Vantage figures and
+  // saved companies. M&A reads only net income, shares and price, and all
+  // three come from the same payload Vantage fills from -- so a deal can
+  // be built from two tickers without entering anything by hand.
+  const [tickers, setTickers] = useState<LoadedTicker[]>([]);
+  const [ticker, setTicker] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [tickerError, setTickerError] = useState<string | null>(null);
+  useEffect(() => { fetchLoadedTickers().then(setTickers); }, []);
 
   const set = (patch: Partial<MnaCompany>) =>
     onChange({ ...side, company: { ...side.company, ...patch } });
@@ -234,6 +270,26 @@ function SidePanel({ role, side, presets, currentCompany, onChange, eps, pe, peL
     onChange({ label, company: c });
     setSourceOpen(false);
   };
+
+  async function fillFromTicker(e: React.FormEvent) {
+    e.preventDefault();
+    if (!ticker.trim() || busy) return;
+    setBusy(true); setTickerError(null);
+    const res = await fetchTicker(ticker);
+    setBusy(false);
+    if (!res.ok) { setTickerError(res.error); return; }
+    // Same scaling as Vantage, so both sides of a deal are in one unit.
+    const c = companyFromInput(scaleToDisplayUnits(res.company.input));
+    if (!c) {
+      // The deal maths needs all three. Say which is absent rather than
+      // filling two fields and leaving the verdict quietly withheld.
+      setTickerError(`${res.company.ticker} is missing net income, shares or price.`);
+      return;
+    }
+    if (onFilled) { onFilled(res.company.name, c); setSourceOpen(false); }
+    else useSource(res.company.name, c);
+    setTicker('');
+  }
 
   return (
     <Card className="mna-side">
@@ -253,6 +309,25 @@ function SidePanel({ role, side, presets, currentCompany, onChange, eps, pe, peL
           </button>
           {sourceOpen && (
             <div className="mna-source-menu">
+              {tickers.length > 0 && (
+                <form className="mna-source-ticker" onSubmit={fillFromTicker}>
+                  <input
+                    value={ticker}
+                    onChange={(e) => setTicker(e.target.value.toUpperCase())}
+                    onFocus={(e) => e.currentTarget.select()}
+                    placeholder="TICKER"
+                    aria-label={`Fill ${role} from a ticker`}
+                    spellCheck={false}
+                    maxLength={10}
+                    list={`mna-tickers-${role}`}
+                  />
+                  <datalist id={`mna-tickers-${role}`}>
+                    {tickers.map((t) => <option key={t.ticker} value={t.ticker}>{t.name}</option>)}
+                  </datalist>
+                  <button type="submit" disabled={busy || !ticker.trim()}>{busy ? '…' : 'Go'}</button>
+                </form>
+              )}
+              {tickerError && <span className="mna-source-why">{tickerError}</span>}
               <button
                 className="mna-source-item"
                 disabled={!fromCurrent}

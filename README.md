@@ -11,7 +11,11 @@ Every number carries its interpretation: the value, a plain-English meaning, and
 
 All the math runs in the browser and is in the code — `npm run verify:math` re-checks every engine against hand-computed cases. **The frontend makes no third-party requests**: no API keys, no CDN, no analytics, and the typefaces are bundled rather than fetched, verified with all non-local hosts blocked.
 
-Vantage can optionally pre-fill a company from a ticker. That calls `/api/company` on this app's own origin — no key and no cross-origin request — backed by a Python job in [`ingest/`](ingest/) that loads SEC EDGAR filings into Postgres on a schedule. It is a convenience, not a dependency: every field stays editable, and with the API unreachable the app works exactly as before, by hand.
+Vantage and M&A can pre-fill a company from a ticker — 189 US large caps, drawn from real SEC filings. **There is no backend.** The figures come from quarterly filings and do not change between them, so they ship with the site as static JSON (1.3 KB per company) and are fetched from the app's own origin: no database, no API key, nothing that can be down.
+
+Producing that data is a separate, offline step: a Python job in [`ingest/`](ingest/) reads SEC EDGAR, resolves each filer's XBRL tags to a common set of concepts, reconstructs quarters the filings never report directly, and exports the result. It runs on a laptop, not on the site.
+
+It is a convenience, not a dependency: every field stays editable, and the app works exactly as before by hand.
 
 ## Run it
 
