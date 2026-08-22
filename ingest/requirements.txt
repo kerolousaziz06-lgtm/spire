@@ -1,15 +1,17 @@
-beautifulsoup4==4.15.0
+# Direct dependencies of the ingest pipeline. Pinned so a scheduled run a
+# month from now behaves like today's.
+#
+# psycopg2-binary was MISSING here for a while: requirements.txt was first
+# generated with a grep that listed packages by name and simply omitted
+# it. Everything worked locally, where the venv had it installed, and the
+# first CI run died on `import psycopg2`. Generated from the imports now,
+# not from a remembered list.
+requests==2.32.5
+psycopg2-binary==2.9.12
+yfinance==1.2.0
+
+# Pulled in by the above, pinned for reproducibility.
+urllib3==1.26.20
 certifi==2026.7.22
 charset-normalizer==3.5.1
-curl_cffi==0.13.0
-frozendict==2.4.7
 idna==3.19
-multitasking==0.0.13
-numpy==2.0.2
-pandas==2.3.3
-peewee==4.3.0
-platformdirs==4.4.0
-pytz==2026.3.post1
-requests==2.32.5
-urllib3==1.26.20
-yfinance==1.2.0
