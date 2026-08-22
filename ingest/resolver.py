@@ -71,13 +71,26 @@ CONCEPT_SPECS: dict[str, ConceptSpec] = {
         "us-gaap:InventoryNet",
         "us-gaap:InventoryFinishedGoodsNetOfReserves",
     )),
-    "depreciation_amortization": ConceptSpec("USD", (
-        # NOT Accumulated* -- that is the balance-sheet total, not the
-        # period expense EBITDA needs.
-        "us-gaap:DepreciationDepletionAndAmortization",
-        "us-gaap:DepreciationAmortizationAndAccretionNet",
-        "us-gaap:DepreciationAndAmortization",
-    )),
+    "depreciation_amortization": ConceptSpec("USD",
+        tags=(
+            # NOT Accumulated* -- that is the balance-sheet running total,
+            # not the period expense EBITDA needs. NOT Future*Amortization*
+            # either: those are forward-looking disclosures of amortisation
+            # still to come. Both would resolve and both would be wrong.
+            "us-gaap:DepreciationDepletionAndAmortization",
+            "us-gaap:DepreciationAmortizationAndAccretionNet",
+            "us-gaap:DepreciationAndAmortization",
+        ),
+        # Microsoft publishes NO combined tag -- only Depreciation and
+        # AmortizationOfIntangibleAssets separately -- so EV/EBITDA was
+        # being skipped for it entirely. Summed, with the usual rule that a
+        # period missing from either component is dropped rather than
+        # half-counted.
+        components=(
+            "us-gaap:Depreciation",
+            "us-gaap:AmortizationOfIntangibleAssets",
+        ),
+    ),
     # ---------------------------------------------------------------------
 
     "operating_cash_flow": ConceptSpec("USD",
