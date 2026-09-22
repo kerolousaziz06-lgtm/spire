@@ -36,6 +36,12 @@ class Quote:
     shares_outstanding: float | None
     beta: float | None
     currency: str
+    # Sector and industry are classification, not market data -- they
+    # belong on `company`. They ride along here because .info already
+    # contains them and re-fetching it separately would double the calls
+    # against a scraped endpoint for nothing.
+    sector: str | None = None
+    industry: str | None = None
     note: str = ""
 
 
@@ -102,13 +108,29 @@ def fetch(ticker: str) -> tuple[Quote | None, str]:
     else:
         note = "no share count returned; reconciliation skipped"
 
+    def _text(v):
+        v = (v or "").strip() if isinstance(v, str) else None
+        return v or None
+
     return Quote(ticker.upper(), datetime.now(timezone.utc).date(), price, cap,
-                 shares, beta, currency, note), "ok"
+                 shares, beta, currency,
+                 _text(info.get("sector")), _text(info.get("industry")),
+                 note), "ok"
 
 
 def as_sql(q: Quote) -> str:
     def n(v): return "NULL" if v is None else repr(float(v))
-    return (
+    def t(v): return "NULL" if v is None else "'" + v.replace("'", "''") + "'"
+    # Classification goes to `company`, which the EDGAR pass has already
+    # created. COALESCE keeps a previously-known sector if a later scrape
+    # comes back without one -- losing the classification would empty out
+    # every sector median, and a stale sector is far better than none.
+    company_update = (
+        f"UPDATE company SET sector = COALESCE({t(q.sector)}, sector), "
+        f"industry = COALESCE({t(q.industry)}, industry) "
+        f"WHERE ticker = '{q.ticker}';\n"
+    )
+    return company_update + (
         "INSERT INTO market_data (ticker, as_of, price, market_cap, "
         "shares_outstanding, beta, currency) VALUES ("
         f"'{q.ticker}', '{q.as_of}', {n(q.price)}, {n(q.market_cap)}, "

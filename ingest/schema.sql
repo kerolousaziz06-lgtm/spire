@@ -15,8 +15,20 @@ CREATE TABLE IF NOT EXISTS company (
   ticker     VARCHAR(10)  NOT NULL,
   name       TEXT         NOT NULL,
   sic        CHAR(4),
+
+  -- Sector and industry come from yfinance, NOT from SIC. SIC does not
+  -- group peers usably at this scale: of 76 SIC codes across 189
+  -- companies, 43 contain exactly one company, so a "peer median" by SIC
+  -- is a median of one. It also files Palo Alto Networks under 3577,
+  -- Computer Peripherals. yfinance returns "Technology" /
+  -- "Software - Infrastructure", which is what a comp set actually needs.
+  sector     TEXT,
+  industry   TEXT,
+
   updated_at TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
+
+CREATE INDEX IF NOT EXISTS company_sector_idx ON company (sector);
 
 CREATE INDEX IF NOT EXISTS company_ticker_idx ON company (ticker);
 CREATE INDEX IF NOT EXISTS company_sic_idx    ON company (sic);
@@ -183,6 +195,27 @@ HAVING COUNT(*) = 4
    -- Q4 is involved. Wide enough for both, still far short of the ~364
    -- that a missing quarter would produce.
    AND MAX(period_end) - MIN(period_end) BETWEEN 230 AND 310;
+
+-- Daily closes. The one thing the pipeline could not answer before: with
+-- a single price per weekly run there is no return series, so MonteVue's
+-- volatility and correlation were assumptions rather than measurements.
+--
+-- Deliberately narrow. Open/high/low and dividends are not used by
+-- anything here, and storing what nothing reads is how a schema rots.
+-- Close is split- and dividend-ADJUSTED (yfinance auto_adjust), because a
+-- raw close series puts a fake -50% return on every split date and that
+-- is precisely the kind of plausible-looking wrong number this codebase
+-- spends its time avoiding.
+CREATE TABLE IF NOT EXISTS price_history (
+  ticker VARCHAR(10) NOT NULL,
+  day    DATE        NOT NULL,
+  close  NUMERIC     NOT NULL CHECK (close > 0),
+  volume BIGINT,
+  PRIMARY KEY (ticker, day)
+);
+
+CREATE INDEX IF NOT EXISTS price_history_day_idx ON price_history (day);
+
 
 -- Market data. Not in any filing: price, market cap and beta come from
 -- yfinance, which is scraping Yahoo's internal API rather than reading an
