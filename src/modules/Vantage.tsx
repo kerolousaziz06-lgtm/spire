@@ -48,6 +48,13 @@ type Props = {
 export function Vantage({
   input, onInput, onResetInput,
   presets, onSavePreset, onDeletePreset, onRenamePreset, autoFillTicker, onAutoFilled }: Props) {
+  // Which company is on screen, if it came from a ticker. Used only to find
+  // its sector for the comps card. It survives field edits on purpose --
+  // editing a figure does not change which company is being analysed, and
+  // the comps card reads the LIVE figures anyway -- but is cleared on
+  // reset, when the sidebar goes back to the sample.
+  const [filledTicker, setFilledTicker] = useState<string | null>(null);
+
   const [tab, setTab] = useState<Tab>('health');
   const [collapsed, setCollapsed] = useState(false);
 
@@ -58,7 +65,8 @@ export function Vantage({
         onChange={onInput}
         autoFillTicker={autoFillTicker}
         onAutoFilled={onAutoFilled}
-        onReset={onResetInput}
+        onReset={() => { setFilledTicker(null); onResetInput(); }}
+        onTicker={setFilledTicker}
         collapsed={collapsed}
         onToggle={() => setCollapsed((c) => !c)}
       />
@@ -97,7 +105,7 @@ export function Vantage({
 
         <div className="vantage-content">
           {tab === 'health' && <HealthTab input={input} />}
-          {tab === 'valuation' && <ValuationTab input={input} />}
+          {tab === 'valuation' && <ValuationTab input={input} ticker={filledTicker} />}
           {tab === 'lbo' && <LboTab input={input} />}
           {tab === 'summary' && <SummaryTab input={input} />}
         </div>

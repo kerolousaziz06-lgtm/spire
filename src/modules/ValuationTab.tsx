@@ -12,6 +12,7 @@
 // ============================================================
 import { useMemo, useState, useEffect } from 'react';
 import { missingFields, multiples, reconcile, applyReconciliation, type CompanyInput, type CompanyField } from '../lib/analysis';
+import { SectorComps } from '../components/SectorComps';
 import { MetricRow } from '../components/MetricRow';
 import { MissingData } from '../components/MissingData';
 import { runDcf, dcfSensitivity, type DcfInput } from '../lib/dcf';
@@ -30,7 +31,7 @@ const DCF_REQUIRES: readonly CompanyField[] = [
   'operatingCashFlow', 'capex', 'totalDebt', 'cash', 'sharesOutstanding', 'sharePrice',
 ];
 
-export function ValuationTab({ input }: { input: CompanyInput }) {
+export function ValuationTab({ input, ticker = null }: { input: CompanyInput; ticker?: string | null }) {
   const missing = missingFields(input, DCF_REQUIRES);
 
   // What the market is paying, before the DCF works out what it is worth
@@ -95,6 +96,9 @@ export function ValuationTab({ input }: { input: CompanyInput }) {
               statement. Enter it in the sidebar and this fills in; it is not estimated for you.
             </p>
           )}
+          {/* The same multiples, set against real peers. "Lower is cheaper"
+              above is only half an answer -- cheaper than WHAT. */}
+          <SectorComps input={input} ticker={ticker} />
         </Card>
       )}
 

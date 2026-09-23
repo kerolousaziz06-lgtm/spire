@@ -1,0 +1,31 @@
+/* Sector comparison, beneath "What the market is paying". Same language
+   as the metric rows: mono micro-labels, hairline rules, no chromatic
+   decoration -- the only hues are the semantic verdict tones. */
+.sc { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); }
+.sc-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.sc-title {
+  margin: 0; font-family: var(--font-mono); font-size: 10px;
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted);
+  font-weight: 400;
+}
+.sc-sector { font-size: 11px; color: var(--text-secondary); }
+.sc-pick {
+  background: var(--bg-panel); border: 1px solid var(--border);
+  border-radius: var(--r-sm); color: var(--text-primary);
+  font-size: 11px; padding: 4px 6px;
+}
+.sc-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
+.sc-table th {
+  text-align: right; font-family: var(--font-mono); font-size: 9px;
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted);
+  font-weight: 400; padding: 0 8px 6px;
+}
+.sc-table td { text-align: right; padding: 6px 8px; border-top: 1px solid var(--border); color: var(--text-primary); }
+.sc-table .sc-lab { text-align: left; color: var(--text-secondary); }
+.sc-range { color: var(--text-muted); }
+/* Deliberately NEUTRAL. A discount is not good news -- it can be a value
+   trap -- and a premium is not bad news; the market may be right to pay
+   it. Colouring a discount sage would assert a verdict the numbers do not
+   support, so the gap is stated in words and judged by the DCF below. */
+.sc-gap { text-align: left !important; font-size: 11px; color: var(--text-secondary); }
+.sc-note, .sc-foot { margin: 10px 0 0; font-size: 11px; line-height: 1.45; color: var(--text-muted); }

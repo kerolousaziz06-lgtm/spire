@@ -20,9 +20,11 @@ type Props = {
   /** Handed over from the Screener. Filled once on arrival. */
   autoFill?: string | null;
   onAutoFilled?: () => void;
+  /** Reports which company is now on screen, so Vantage can find its sector. */
+  onTicker?: (ticker: string | null) => void;
 };
 
-export function TickerFill({ onFill, autoFill, onAutoFilled }: Props) {
+export function TickerFill({ onFill, autoFill, onAutoFilled, onTicker }: Props) {
   const [ticker, setTicker] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,6 +58,7 @@ export function TickerFill({ onFill, autoFill, onAutoFilled }: Props) {
     const scaled = scaleToDisplayUnits(res.company.input);
     setGot({ ...res.company, input: scaled });
     onFill(scaled);
+    onTicker?.(res.company.ticker);
   }
 
   // A ticker handed over from the Screener fills once on arrival.
