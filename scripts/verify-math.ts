@@ -22,6 +22,7 @@ import { dupont, multiples, profitability, SAMPLE_INPUT } from '../src/lib/analy
 import { runDcf } from '../src/lib/dcf';
 import { runLbo, SAMPLE_LBO } from '../src/lib/lbo';
 import { runMna, type MnaCompany, type MnaDeal } from '../src/lib/mna';
+import { runQuery, coverage as scrCoverage, EMPTY_QUERY, type ScreenerRow } from '../src/lib/screener';
 import { SAMPLE_MONTH as SAMPLE_MONTH_K, computeMonth, buildFlow, flowImbalance, emptyMonth, computeSeries, annualSavings, applyWhatIf, rateSavings, rateCategory, runway, reviveBudget, SAMPLE_BUDGET, type MonthEntry } from '../src/lib/budget';
 
 function mulberry32(a: number) {
@@ -735,3 +736,70 @@ console.log(`    negative cash -> fallback ${kPartial?.cashOnHand}   ${kPartial?
 // A revived payload must still satisfy the identities.
 const kRev = computeMonth(reviveBudget(JSON.parse(JSON.stringify(SAMPLE_BUDGET)), SAMPLE_BUDGET)!.months[4]);
 console.log(`\n  round-tripped through JSON: savings ${f(kRev.savings, 2)}  ${okc(kRev.savings, 2034, 1e-9)}  graph balances ${okc(flowImbalance(buildFlow(kRev)), 0, 1e-6)}`);
+
+
+// ============================================================
+// L. Screener engine -- a NULL must never act as a number
+// ============================================================
+console.log('\n' + '='.repeat(74));
+console.log('L. Screener -- NULL is excluded, never zero; NULLs sort last');
+console.log('='.repeat(74));
+
+// Every name here is prefixed scr: this is a flat script sharing one
+// module scope, and `base`, `cut` and `rev` have each collided before.
+const scrBlank: ScreenerRow = {
+  ticker: '', name: '', sector: null, industry: null,
+  revenue: null, net_income: null, market_cap: null,
+  gross_margin: null, operating_margin: null, net_margin: null, roe: null, roa: null,
+  debt_to_equity: null, free_cash_flow: null, yoy_growth: null, cagr_3y: null,
+  pe: null, ps: null, ev_ebitda: null, ev_revenue: null,
+  annual_volatility: null, beta_vs_universe: null,
+  net_margin_pct_in_sector: null, growth_pct_in_sector: null,
+  cheapness_pct_in_sector: null, roe_pct_in_sector: null, sector_size: null,
+};
+const scrRow = (t: string, sector: string, ev: number | null, margin: number | null): ScreenerRow =>
+  ({ ...scrBlank, ticker: t, name: t, sector, ev_ebitda: ev, net_margin: margin, market_cap: 1 });
+
+// LOSS has no usable EV/EBITDA -- exactly the case the SQL NULLs out, since
+// a negative EBITDA would otherwise sort to the top of "cheapest first".
+const scrRows: ScreenerRow[] = [
+  scrRow('CHEAP', 'Tech', 8,    0.20),
+  scrRow('MID',   'Tech', 20,   0.10),
+  scrRow('RICH',  'Tech', 45,   0.30),
+  scrRow('LOSS',  'Tech', null, -0.05),
+  scrRow('BANK',  'Fin',  null,  0.25),
+];
+const scrTick = (xs: ScreenerRow[]) => xs.map((x) => x.ticker).join(',');
+
+// 1. Cheapest first must not lead with the company that HAS no multiple.
+const scrAsc = runQuery(scrRows, { ...EMPTY_QUERY, sortBy: 'ev_ebitda', sortDir: 'asc' });
+console.log(`cheapest first         ${scrTick(scrAsc)}`);
+console.log(`  leads with a real multiple       ${scrAsc[0].ticker === 'CHEAP' ? 'PASS' : 'FAIL'}`);
+console.log(`  NULLs are last                   ${scrAsc.slice(-2).every((x) => x.ev_ebitda === null) ? 'PASS' : 'FAIL'}`);
+
+// 2. ...and last in the other direction too. A NULL is not the largest
+//    value any more than it is the smallest.
+const scrDesc = runQuery(scrRows, { ...EMPTY_QUERY, sortBy: 'ev_ebitda', sortDir: 'desc' });
+console.log(`richest first          ${scrTick(scrDesc)}`);
+console.log(`  NULLs still last                 ${scrDesc.slice(-2).every((x) => x.ev_ebitda === null) ? 'PASS' : 'FAIL'}`);
+
+// 3. A filter on a metric EXCLUDES rows that lack it. Treating LOSS's NULL
+//    as 0 would pass "EV/EBITDA <= 25" and call a loss-maker cheap.
+const scrCapped = runQuery(scrRows, {
+  ...EMPTY_QUERY, sortBy: 'ev_ebitda', sortDir: 'asc',
+  filters: [{ metric: 'ev_ebitda', min: null, max: 25 }],
+});
+console.log(`EV/EBITDA <= 25        ${scrTick(scrCapped)}`);
+console.log(`  loss-maker excluded, not "0"     ${!scrCapped.some((x) => x.ticker === 'LOSS') ? 'PASS' : 'FAIL'}`);
+console.log(`  exactly CHEAP,MID                ${scrTick(scrCapped) === 'CHEAP,MID' ? 'PASS' : 'FAIL'}`);
+
+// 4. A NEGATIVE value is a real value and must survive a filter it meets.
+const scrNeg = runQuery(scrRows, {
+  ...EMPTY_QUERY, filters: [{ metric: 'net_margin', min: null, max: 0 }],
+});
+console.log(`net margin <= 0        ${scrTick(scrNeg)}   ${scrTick(scrNeg) === 'LOSS' ? 'PASS' : 'FAIL'} (negative kept, not dropped as missing)`);
+
+// 5. Sector narrowing, and coverage that says why a result is small.
+const scrFin = runQuery(scrRows, { ...EMPTY_QUERY, sectors: ['Fin'] });
+console.log(`sector = Fin           ${scrTick(scrFin)}   ${scrTick(scrFin) === 'BANK' ? 'PASS' : 'FAIL'}`);
+console.log(`coverage(ev_ebitda)    ${scrCoverage(scrRows, 'ev_ebitda')}/${scrRows.length}   ${scrCoverage(scrRows, 'ev_ebitda') === 3 ? 'PASS' : 'FAIL'}`);
