@@ -83,6 +83,14 @@ jobs:
           # Rate limited to 10 req/sec inside ingest.py; ~2.5 min for 190.
           grep -vE '^\s*(#|$)' ingest/tickers.txt | tr '\n' ' ' | xargs python ingest/ingest.py
 
+      - name: Fetch price history
+        # One batched yfinance call for the whole universe, ~36s. Allowed
+        # to fail for the same reason as market data below: last week's
+        # volatility staying published beats losing the refresh, and
+        # company_risk simply returns fewer rows.
+        continue-on-error: true
+        run: python ingest/prices.py --file ingest/tickers.txt
+
       - name: Fetch market data
         # yfinance scrapes Yahoo and can break without warning. A price
         # failure must not sink the run: the previous prices stay published
@@ -92,6 +100,14 @@ jobs:
           grep -vE '^\s*(#|$)' ingest/tickers.txt | tr '\n' ' ' \
             | xargs python ingest/market.py --sql > /tmp/market.sql
           psql "$DATABASE_URL" -f /tmp/market.sql
+
+      - name: Build analytical views
+        # Views only, no data -- created AFTER the tables are populated so
+        # a view over an empty table is never what gets exported.
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f ingest/analytics.sql
+
+      - name: Export screener, comps, risk and growth
+        run: python ingest/export_analytics.py
 
       - name: Export static files
         run: |

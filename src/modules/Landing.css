@@ -132,8 +132,24 @@
    the last card overall — with four modules `:last-child` left a hairline
    hanging off the right edge of row one. */
 .ed-module:nth-child(2n) { border-right: none; }
-/* And every row but the last gets a rule under it. */
-.ed-module:not(:nth-last-child(-n+2)) { border-bottom: 1px solid rgba(236,231,219,0.18); }
+
+/* AN ODD MODULE COUNT, which arrived with the fifth module. The last card
+   would otherwise sit alone in a half-width cell, keeping a border-right
+   that runs down the middle of the row against empty space — exactly the
+   hanging hairline the rule above exists to prevent. Span it instead. */
+.ed-module:last-child:nth-child(odd) { grid-column: 1 / -1; border-right: none; }
+
+/* Every row but the LAST gets a rule under it, and which cards form the
+   last row depends on parity:
+     even count — the final two share it
+     odd count  — the final card spans the row alone
+   `:nth-last-child(2):nth-child(odd)` is true only in the even case,
+   because the second-from-last card is at an odd index exactly then. The
+   previous `:not(:nth-last-child(-n+2))` rule got this wrong at five,
+   dropping the rule under row two as well as row three. */
+.ed-module { border-bottom: 1px solid rgba(236,231,219,0.18); }
+.ed-module:last-child,
+.ed-module:nth-last-child(2):nth-child(odd) { border-bottom: none; }
 .ed-module:hover { background: rgba(236,231,219,0.05); }
 .ed-module-num { font-family: var(--font-mono); font-size: 13px; color: var(--light-faint); padding-top: 6px; }
 .ed-module-body { flex: 1; }

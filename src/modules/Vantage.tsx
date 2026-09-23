@@ -31,6 +31,9 @@ const TABS: { id: Tab; label: string; blurb: string }[] = [
 ];
 
 type Props = {
+  /** A ticker handed over by the Screener, filled once on arrival. */
+  autoFillTicker?: string | null;
+  onAutoFilled?: () => void;
   input: CompanyInput;
   onInput: (next: CompanyInput) => void;
   onResetInput: () => void;
@@ -44,8 +47,7 @@ type Props = {
 
 export function Vantage({
   input, onInput, onResetInput,
-  presets, onSavePreset, onDeletePreset, onRenamePreset,
-}: Props) {
+  presets, onSavePreset, onDeletePreset, onRenamePreset, autoFillTicker, onAutoFilled }: Props) {
   const [tab, setTab] = useState<Tab>('health');
   const [collapsed, setCollapsed] = useState(false);
 
@@ -54,6 +56,8 @@ export function Vantage({
       <InputSidebar
         input={input}
         onChange={onInput}
+        autoFillTicker={autoFillTicker}
+        onAutoFilled={onAutoFilled}
         onReset={onResetInput}
         collapsed={collapsed}
         onToggle={() => setCollapsed((c) => !c)}

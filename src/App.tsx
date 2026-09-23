@@ -19,6 +19,7 @@ import { Landing } from './modules/Landing';
 import { Settings } from './modules/Settings';
 import { Mna, DEFAULT_MNA, type MnaState } from './modules/Mna';
 import { Ledger } from './modules/Ledger';
+import { Screener } from './modules/Screener';
 import { SAMPLE_BUDGET, reviveBudget, type BudgetData } from './lib/budget';
 import { usePersistedState } from './lib/hooks';
 import {
@@ -47,6 +48,12 @@ const INITIAL_HOLDINGS: Holding[] = [
 
 export default function App() {
   const [activeModule, setActiveModule] = useState<string | null>(null);
+
+  // A ticker handed from the Screener to Vantage. Deliberately NOT
+  // persisted: it is a one-shot instruction, and a stored one would
+  // re-fill the sidebar on every reload, overwriting whatever the user
+  // had typed since.
+  const [pendingTicker, setPendingTicker] = useState<string | null>(null);
 
   const [holdings, setHoldings, resetHoldings] = usePersistedState<Holding[]>(
     STORAGE_KEYS.portfolio,
@@ -145,6 +152,17 @@ export default function App() {
             onSavePreset={(name) => setPresets(savePreset(presets, name, company))}
             onDeletePreset={(id) => setPresets(deletePreset(presets, id))}
             onRenamePreset={(id, name) => setPresets(renamePreset(presets, id, name))}
+            autoFillTicker={pendingTicker}
+            onAutoFilled={() => setPendingTicker(null)}
+          />
+        );
+      case 'screener':
+        return (
+          <Screener
+            // Clicking a ticker in the table hands it to Vantage. The
+            // screener answers "which companies", Vantage answers "is this
+            // one any good" -- the handoff is the point of having both.
+            onOpenCompany={(t) => { setPendingTicker(t); setActiveModule('vantage'); }}
           />
         );
       case 'mna':

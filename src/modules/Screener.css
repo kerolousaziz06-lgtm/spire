@@ -1,0 +1,105 @@
+/* Screener — the universe as a table.
+   Follows the shared tokens: flat surfaces, hairline rules, mono
+   uppercase micro-labels. Nothing here defines a colour of its own. */
+.scr { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+
+.scr-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  padding: 20px 24px 14px; border-bottom: 1px solid var(--border);
+}
+.scr-title { margin: 0; font-size: 22px; color: var(--text-primary); font-weight: 500; }
+.scr-sub {
+  margin: 4px 0 0; font-family: var(--font-mono); font-size: 10px;
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted);
+}
+.scr-reset {
+  background: none; border: 1px solid var(--border); border-radius: var(--r-sm);
+  color: var(--text-secondary); cursor: pointer; padding: 5px 12px;
+  font-family: var(--font-mono); font-size: 10px;
+  letter-spacing: 0.12em; text-transform: uppercase;
+}
+.scr-reset:hover { border-color: var(--border-strong); color: var(--text-primary); }
+
+.scr-body { display: flex; flex: 1; min-height: 0; }
+
+/* Filters scroll independently of the table; a long list of limits must
+   not push the results off the screen. */
+.scr-filters {
+  width: 250px; flex: none; overflow-y: auto;
+  border-right: 1px solid var(--border); padding: 16px;
+}
+.scr-label {
+  display: block; font-family: var(--font-mono); font-size: 10px;
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted);
+  margin-bottom: 6px;
+}
+.scr-search-wrap { display: block; margin-bottom: 18px; }
+.scr-search, .scr-num {
+  width: 100%; box-sizing: border-box;
+  background: var(--bg-panel); border: 1px solid var(--border);
+  border-radius: var(--r-sm); color: var(--text-primary);
+  font-family: var(--font-mono); font-size: 11px; padding: 6px 8px;
+}
+.scr-search { letter-spacing: 0.12em; text-transform: uppercase; }
+.scr-search:focus, .scr-num:focus { outline: none; border-color: var(--border-strong); }
+.scr-search::placeholder, .scr-num::placeholder { color: var(--text-muted); }
+
+.scr-group { margin-bottom: 18px; }
+.scr-sectors { display: flex; flex-wrap: wrap; gap: 4px; }
+.scr-chip {
+  background: var(--bg-panel); border: 1px solid var(--border);
+  border-radius: var(--r-sm); color: var(--text-secondary); cursor: pointer;
+  font-size: 10px; padding: 4px 7px;
+}
+/* Active inverts to dark ink on bone — never colour:#fff, which is
+   invisible against the bone accent. */
+.scr-chip.is-on { background: var(--accent); color: var(--bg-base); border-color: var(--accent); }
+
+.scr-filter { padding: 8px 0; border-top: 1px solid var(--border); }
+.scr-filter-head { display: flex; justify-content: space-between; align-items: baseline; }
+.scr-filter-name { font-size: 11px; color: var(--text-secondary); }
+.scr-filter-cov {
+  font-family: var(--font-mono); font-size: 9px; color: var(--text-muted);
+}
+.scr-filter-row { display: flex; gap: 5px; margin-top: 4px; }
+.scr-filter-why {
+  margin: 4px 0 0; font-size: 10px; line-height: 1.35; color: var(--text-muted);
+}
+
+.scr-results { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.scr-count {
+  padding: 10px 16px; border-bottom: 1px solid var(--border);
+  font-family: var(--font-mono); font-size: 10px;
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted);
+}
+.scr-median { color: var(--text-secondary); }
+.scr-median strong { color: var(--text-primary); }
+.scr-median-n { color: var(--text-muted); }
+
+.scr-table-wrap { flex: 1; overflow: auto; }
+.scr-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.scr-table th, .scr-table td {
+  padding: 7px 12px; text-align: right; border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.scr-table th { position: sticky; top: 0; background: var(--bg-card); z-index: 1; }
+.scr-th-t, .scr-td-t { text-align: left; }
+.scr-table tbody tr:hover { background: var(--bg-card-hover); }
+
+.scr-sort {
+  background: none; border: none; cursor: pointer; padding: 0;
+  font-family: var(--font-mono); font-size: 10px;
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted);
+}
+.scr-sort.is-on, .scr-sort:hover { color: var(--text-primary); }
+
+.scr-ticker {
+  background: none; border: none; cursor: pointer; padding: 0;
+  font-family: var(--font-mono); font-size: 12px; color: var(--text-primary);
+}
+.scr-ticker:hover { text-decoration: underline; }
+
+.scr-empty, .scr-note {
+  padding: 24px; text-align: center; color: var(--text-muted);
+  font-size: 12px; line-height: 1.5;
+}

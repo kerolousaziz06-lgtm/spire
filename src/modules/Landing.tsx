@@ -69,6 +69,9 @@ export function Landing({ onEnter, brand = 'SPIRE' }: Props) {
         <ModuleCard index={3} num="04" name="Ledger" kind="PERSONAL FINANCE"
           desc="Where the money went, and whether it lasts."
           onEnter={() => onEnter('ledger')} />
+        <ModuleCard index={4} num="05" name="Screener" kind="THE UNIVERSE"
+          desc="Rank 189 companies at once. Filter on the ratios, see where each sits in its sector."
+          onEnter={() => onEnter('screener')} />
       </section>
 
       <footer className="ed-footer">

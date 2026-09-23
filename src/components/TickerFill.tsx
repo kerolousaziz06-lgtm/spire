@@ -15,9 +15,14 @@ import { FIELD_LABELS, type CompanyInput } from '../lib/analysis';
 import { fetchTicker, fetchLoadedTickers, scaleToDisplayUnits, type FetchedCompany, type LoadedTicker } from '../lib/tickerFetch';
 import './TickerFill.css';
 
-type Props = { onFill: (input: CompanyInput) => void };
+type Props = {
+  onFill: (input: CompanyInput) => void;
+  /** Handed over from the Screener. Filled once on arrival. */
+  autoFill?: string | null;
+  onAutoFilled?: () => void;
+};
 
-export function TickerFill({ onFill }: Props) {
+export function TickerFill({ onFill, autoFill, onAutoFilled }: Props) {
   const [ticker, setTicker] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,6 +43,36 @@ export function TickerFill({ onFill }: Props) {
     });
   }, []);
 
+  // ONE fetch path, shared by the form and by the Screener handoff. Two
+  // copies would be two places to forget the unit scaling, and a company
+  // arriving in raw dollars next to a sidebar working in billions is the
+  // bug that made every filled figure unreadable the first time.
+  async function fill(raw: string) {
+    if (!raw.trim() || busy) return;
+    setBusy(true); setError(null); setGot(null); setShowDetail(false);
+    const res = await fetchTicker(raw);
+    setBusy(false);
+    if (!res.ok) { setError(res.error); return; }
+    const scaled = scaleToDisplayUnits(res.company.input);
+    setGot({ ...res.company, input: scaled });
+    onFill(scaled);
+  }
+
+  // A ticker handed over from the Screener fills once on arrival.
+  //
+  // onAutoFilled fires whatever the outcome, including a failure: it
+  // clears the instruction in App, and leaving it set would re-run the
+  // same failing lookup on every later render of this module.
+  //
+  // Declared BEFORE the early return below, because a hook after a
+  // conditional return is a hook that sometimes does not run.
+  useEffect(() => {
+    if (available !== true || !autoFill) return;
+    setTicker(autoFill);
+    void fill(autoFill).finally(() => onAutoFilled?.());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoFill, available]);
+
   // Hidden when no data service is reachable -- deployed without a
   // database, or running `npm run dev` without `npm run dev:api`. Vantage
   // is designed around typing the figures in; a lookup box that always
@@ -46,15 +81,7 @@ export function TickerFill({ onFill }: Props) {
 
   async function run(e: React.FormEvent) {
     e.preventDefault();
-    if (!ticker.trim() || busy) return;
-    setBusy(true); setError(null); setGot(null); setShowDetail(false);
-    const res = await fetchTicker(ticker);
-    setBusy(false);
-    if (!res.ok) { setError(res.error); return; }
-    // Scale into the unit the sidebar is working in before handing it over.
-    const scaled = scaleToDisplayUnits(res.company.input);
-    setGot({ ...res.company, input: scaled });
-    onFill(scaled);
+    void fill(ticker);
   }
 
   const filled = got

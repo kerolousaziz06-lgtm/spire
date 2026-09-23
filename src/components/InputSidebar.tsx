@@ -21,6 +21,9 @@ type Props = {
   onReset: () => void;
   collapsed: boolean;
   onToggle: () => void;
+  /** Ticker handed over by the Screener; filled once, then cleared. */
+  autoFillTicker?: string | null;
+  onAutoFilled?: () => void;
 };
 
 // Field groups mirror the real financial statements, so filling this
@@ -48,7 +51,7 @@ const GROUPS: { title: string; fields: CompanyField[] }[] = [
   },
 ];
 
-export function InputSidebar({ input, onChange, onReset, collapsed, onToggle }: Props) {
+export function InputSidebar({ input, onChange, onReset, collapsed, onToggle, autoFillTicker, onAutoFilled }: Props) {
   const [group, setGroup] = useState(0); // which statement group is open
 
   // The field being edited, holding the LITERAL keystrokes.
@@ -121,7 +124,7 @@ export function InputSidebar({ input, onChange, onReset, collapsed, onToggle }: 
           below it -- a control that overwrites should be seen before the
           thing it overwrites, not discovered after. Every field stays
           editable, so this is a starting point, not a lock. */}
-      <TickerFill onFill={onChange} />
+      <TickerFill onFill={onChange} autoFill={autoFillTicker} onAutoFilled={onAutoFilled} />
 
       {/* group tabs */}
       <div className="isb-groups">
